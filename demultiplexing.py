@@ -5,7 +5,6 @@ New algorithm applied by Jon Xu on the original framework of Caitlin's script
 
 import pdb
 import sys
-import vcf  # https://pyvcf.readthedocs.io/en/latest/INTRO.html
 import numpy as np
 from scipy.stats import binom
 import pysam as ps  # http://pysam.readthedocs.io/en/latest/api.html#sam-bam-files
@@ -19,57 +18,14 @@ class SNV_data:
     Stores data on each SNV
     """
 
-    def __init__(self, chrom, pos, ref, alt, loglik):
+    def __init__(self, chrom_pos):
         """
         Parameters:
             chrom (int): chromosome number
             pos (int): position on chromosome
-            ref (str): reference base
-            alt (str): alternate base
-            loglik (tuple(float)): log likelihood of genotypes normalised to most likely allele (RR,RA,AA)
         """
-        self.CHROM = chrom
-        self.POS = pos
-        self.REF = ref
-        self.ALT = alt
-        self.loglik = loglik
-        self.RR, self.RA, self.AA = self._calculate_genotype(loglik)
-
-    def _calculate_genotype(self, loglik):
-        """
-        Calculates genotype probabilities from normalised log likelihoods in vcf file(by likely allele)
-        Example:
-            if allele RR is the most likely then:
-            likRR = P(RR)/P(RR)
-            likRA = P(RA)/P(RR)
-            likAA = P(AA)/P(RR)
-            [P(RR) + P(RA) + P(AA)]/P(RR) = (likRR + likRA + likAA)
-            P(RR) = 1/(likRR + likRA + likAA)
-            P(RA) = likRA * P(RR)
-            P(AA) = likRA * P(RR)
-        Returns:
-            RR, RA, AA (tuple(floats)): genotype probabilities
-        """
-        # llikRR, llikRA, llikAA = loglik   # changed for adapting to more than 3 values
-        # AA,AB,BB,AC,BC,CC,AD,BD,CD,DD, [(0),(1,3,6),(2,4,5,7,8,9)]
-        likRR = likRA = likAA = 0
-        for i in range(0, len(loglik)):
-            if i == 0: 
-                likRR += 10 ** loglik[i]
-            if i in [1,3,6]:
-                likRA += 10 ** loglik[i]
-            else:
-                likAA += 10 ** loglik[i]
-        
-        # get probability of the most likely allele that everything was normalised to
-        pmax = 1 / (likRR + likRA + likAA)
-
-        # Calcuate allele probabilities
-        RR = likRR * pmax
-        RA = likRA * pmax
-        AA = likAA * pmax
-
-        return RR, RA, AA
+        self.CHROM = chrom_pos.split(':')[0] 
+        self.POS = chrom_pos.split(':')[1]
 
     def get_all_SNV_pos(all_SNVs):
         """
@@ -116,26 +72,16 @@ class model_genotype:
                     columns=['RR', 'RA', 'AA'])
 
     def initialise_model_genotypes(self):
-        """ Initialises model from dirichlet distribution based on calculated
-        average genotype in vcf file """
-        for snv in self.all_SNVs:
-            pos = "{}:{}".format(snv.CHROM, snv.POS)
-            gt = np.random.dirichlet((snv.RR+1e-6, snv.RA+1e-6, snv.AA+1e-6),
-                                     self.num).transpose()
-            for n in range(self.num):
-                self.model_genotypes[n].loc[pos] = (
-                    gt[0][n], gt[1][n], gt[2][n])
-
-    def initialise_model_genotypes__bak(self):
-        """ Initialises model from dirichlet distribution based on calculated
-        average genotype in vcf file """
+        """
+	Initialises model from dirichlet distribution
+	"""
         for n in range(self.num):
             dir_sim = np.random.dirichlet((1,1),len(self.all_SNVs))  # generate random dirichlet distribution to simulate genotypes probability
             gt = [item[0] for item in dir_sim]   # take the first value of each pair in the distribution results
             i = 0
             for snv in self.all_SNVs:
                 pos = "{}:{}".format(snv.CHROM, snv.POS)
-                self.model_genotypes[n].loc[pos] = (gt[i]**2, 2*gt[i]*(1-gt[i]), (1-gt[i])**2)   # based on Hardy-Weinberg equilibrium
+                self.model_genotypes[n].loc[pos] = ((1-gt[i])**2, 2*gt[i]*(1-gt[i]), gt[i]**2)   # based on Hardy-Weinberg equilibrium
                 i += 1
 
     def calculate_model_genotypes(self):
@@ -145,23 +91,22 @@ class model_genotype:
         coverage = [0] * self.num
         no_coverage = [0] * self.num
         for snv in self.all_SNVs:  # for each snv position
-            if len(snv.REF) == 1 and len(snv.ALT) == 1:  # skip indels
-                pos = "{}:{}".format(snv.CHROM, snv.POS)
-                for n in range(self.num):  # for the number of genotypes being modelled
-                    cluster = self.assigned[n]  # list of barcodes
+            pos = "{}:{}".format(snv.CHROM, snv.POS)
+            for n in range(self.num):  # for the number of genotypes being modelled
+                cluster = self.assigned[n]  # list of barcodes
 
-                    # get snv ALT base calls for cells assigned to model (cluster), returns pandas.Series
-                    ref_count = sum(self.ref_bc_mtx.loc[pos, cluster])
-                    alt_count = sum(self.alt_bc_mtx.loc[pos, cluster])
-                    tot_count = ref_count + alt_count
-                    if ref_count > 0 or alt_count > 0:  # if cells assigned in model carry reads at this snv
-                        P_A_S = alt_count / tot_count       # probability of alt counts
-                        coverage[n] += 1
-                        self.model_genotypes[n].loc[pos] = ((1-P_A_S)**2, 2*P_A_S*(1-P_A_S), P_A_S**2)   # derive genotype probabilities using observed ALT probability, HWE
+                # get snv ALT base calls for cells assigned to model (cluster), returns pandas.Series
+                ref_count = sum(self.ref_bc_mtx.loc[pos, cluster])
+                alt_count = sum(self.alt_bc_mtx.loc[pos, cluster])
+                tot_count = ref_count + alt_count
+                if ref_count > 0 or alt_count > 0:  # if cells assigned in model carry reads at this snv
+                    P_A_S = alt_count / tot_count       # probability of alt counts
+                    coverage[n] += 1
+                    self.model_genotypes[n].loc[pos] = ((1-P_A_S)**2, 2*P_A_S*(1-P_A_S), P_A_S**2)   # derive genotype probabilities using observed ALT probability, HWE
 
-                    else:
-                        no_coverage[n] += 1
-                        self.model_genotypes[n].loc[pos] = (BASE_RR_PROB, BASE_RA_PROB, BASE_AA_PROB)
+                else:
+                    no_coverage[n] += 1
+                    self.model_genotypes[n].loc[pos] = (BASE_RR_PROB, BASE_RA_PROB, BASE_AA_PROB)
         
         #pdb.set_trace()
         print("Coverage for model 1 = {}, no coverage = {}".format(coverage[0], no_coverage[0]))
@@ -359,29 +304,18 @@ def main():
     num_runs = 3            # number of runs
     num_models = 2          # number of models in each run
 
-    """ The following is various files used while testing the program
-    file_v = .vcf file
-    file_s = .bam file
-    file_bc = .txt file of all known and checked barcodes
-    """
 
     # Mixed donor files
-    vcf_file = "test.vcf"
-    bc_file = "test.txt"
-    ref_csv = 'test_ref.csv'
-    alt_csv = 'test_alt.csv'
+    bc_file = "test.txt"   # validated cell barcodes
+    ref_csv = 'test_ref.csv'  # reference matrix
+    alt_csv = 'test_alt.csv'  # alternative matrix
     outfile_A = 'model_A{}_de.txt'
     outfile_B = 'model_B{}_de.txt'
     
-    in_vcf = vcf.Reader(open(vcf_file, 'r'))
-
-    vcf_records = []
-    for record in in_vcf:
-        vcf_records.append(record)
-
     all_SNVs = []  # list of SNV_data objects
-    for record in vcf_records:
-        all_SNVs.append(SNV_data(record.CHROM, record.POS, record.REF, record.ALT[0], record.samples[0]['GL']))
+    matrix = pd.read_csv(ref_csv)
+    for record in matrix.loc[:,'SNV']:
+        all_SNVs.append(SNV_data(record))
     
     print ("Starting data collection", datetime.datetime.now().time())
     
