@@ -42,10 +42,9 @@ class SNV_data:
             if pos not in all_POS:
                 all_POS.append(pos)
         return all_POS
-        
 
 class models:
-    def __init__(self, all_SNVs, base_calls_mtx, barcodes, num=2, model_genotypes=[], P_s_c=[], P_c_s=[], assigned=None):
+    def __init__(self, all_SNVs, base_calls_mtx, barcodes, num=2, model_genotypes=[], assigned=None, P_c_s=[], P_s_c=[]):
         """
         A complete model class containing SNVs, matrices counts, barcodes, model genotypes with assigned cells 
 
@@ -68,6 +67,7 @@ class models:
         self.assigned = assigned
         self.P_s_c = P_s_c
         self.P_c_s = P_c_s
+
         if self.P_s_c == []:
             self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), num)),
                             index = self.barcodes, columns = list(range(num)))
@@ -113,8 +113,6 @@ class models:
                 model_genotypes: P(g|S_v) according to the alt counts and the P(s|c)
             """
 
-            coverage = [0] * self.num
-            no_coverage = [0] * self.num
             A_sv = T_sv = 0     # P(s|c) weighted Alt/Total matrices counts for the SNV in sample
             for snv in self.all_SNVs:  # for each snv position
                 pos = "{}:{}".format(snv.CHROM, snv.POS)
@@ -124,16 +122,8 @@ class models:
                         T_sv += self.P_s_c.loc[barcode, n] * (self.alt_bc_mtx.loc[pos, barcode] + self.ref_bc_mtx.loc[pos, barcode])
                     
                     if A_sv > 0 or T_sv > 0:      # if cells assigned in model carry reads at this snv
-                        P_A_S = A_sv / T_sv       # probability of alt counts
-                        coverage[n] += 1
+                        P_A_S = (A_sv + 1) / (T_sv + 2)       # probability of alt counts, with pseudo counts
                         self.model_genotypes[n].loc[pos] = ((1-P_A_S)**2, 2*P_A_S*(1-P_A_S), P_A_S**2)   # derive genotype probabilities using observed ALT probability, HWE
-
-                    else:
-                        no_coverage[n] += 1
-                        self.model_genotypes[n].loc[pos] = (BASE_RR_PROB, BASE_RA_PROB, BASE_AA_PROB)
-        
-            for n in range(self.num):
-                print("Coverage for model {} = {}, no coverage = {}".format(n+1, coverage[n], no_coverage[n]))
 
 
     def calculate_cell_likelihood(self):
@@ -179,13 +169,9 @@ class models:
                     alt_count = self.alt_bc_mtx.loc[pos, barcode]
                     tot_count = ref_count + alt_count
 
-                    if tot_count > 0:
-                        # calculate probability of alt_count in the barcode at the SNV conditioned on general genotype
-                        # probability of A in RR/RA/AA is 0.01, 0.5, 0.09
-                        P_A_g = binom.pmf(alt_count, tot_count, (err, 0.5, 1-err))
-
-                    else:
-                        P_A_g = (err, 0.5, 1-err)
+                    # calculate probability of alt_count in the barcode at the SNV conditioned on general genotype
+                    # probability of A in RR/RA/AA is 0.01, 0.5, 0.99
+                    P_A_g = binom.pmf(alt_count, tot_count, (err, 0.5, 1-err))
 
                     # calculate P(c|S_n) for the SNV, sum of the three P_c_given_g,S for model n
                     P_c_Sv = sum(P_A_g * self.model_genotypes[n].loc[pos])
@@ -218,12 +204,13 @@ class models:
 
 
 def run_model(all_SNVs, base_calls_mtx, barcodes, num_models):
-  
-    model = models(all_SNVs, base_calls_mtx, barcodes, num_models, model_genotypes=[], P_s_c=[], P_c_s=[], assigned=None)
-   
-    print("Commencing E-M")
 
+    model = models(all_SNVs, base_calls_mtx, barcodes, num_models, model_genotypes=[], assigned=None, P_c_s=[], P_s_c=[])
+
+    print("Commencing E-M")
+    
     iterations = 0
+    sum_log_likelihoods = []
 
     while iterations < 20:
 
@@ -235,21 +222,24 @@ def run_model(all_SNVs, base_calls_mtx, barcodes, num_models):
         print("calculating cell likelihood ", datetime.datetime.now().time())
         model.calculate_cell_likelihood()
 
-        print("log likelihood: ", model.P_c_s.sum().sum())
+        sum_log_likelihood = model.P_c_s.apply(np.log).sum().sum()
+        sum_log_likelihoods.append(sum_log_likelihood)
+        print("log likelihood of iteration {}".format(iterations), sum_log_likelihood)
 
     model.assign_cells()
 
     for n in range(num_models):
         with open('barcodes_{}_de.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
-            	myfile.write(str(item) + '\n')
+                myfile.write(str(item) + '\n')
 
         model.model_genotypes[n].to_csv('model_genotypes{}_de.csv'.format(n))
 
-    model.P_c_s.to_csv('cells_llhoods.csv')
+    model.P_c_s.to_csv('P_c_s.csv')
+    model.P_s_c.to_csv('P_s_c.csv')
     
     print("Finished model at {}".format(datetime.datetime.now().time()))
-
+    print(sum_log_likelihoods)
 
 def get_all_barcodes(bc_file):
     """
@@ -279,22 +269,21 @@ def read_base_calls_matrix(ref_csv, alt_csv):
 
 def main():
 
-    num_models = 2          # number of models in each run
-
+    num_models = 2          # number Fof models in each run
 
     # Mixed donor files
-    bc_file = "bc_sorted.txt"   # validated cell barcodes
-    ref_csv = 'ac21_ref.csv'  # reference matrix
-    alt_csv = 'ac21_alt.csv'  # alternative matrix
-    outfile_A = 'model_A{}_21.txt'
-    outfile_B = 'model_B{}_21.txt'
-    
-    #bc_file = 'test.txt'
-    #ref_csv = 'test_ref.csv'
-    #alt_csv = 'test_alt.csv'
-    #outfile_A = 'model_A{}_de.txt'
-    #outfile_B = 'model_B{}_de.txt'
-    #outfile_g = 'model_genotypes{}{}_de.csv'
+    #bc_file = "bc_sorted.txt"   # validated cell barcodes
+    #ref_csv = 'ac21_ref.csv'  # reference matrix
+    #alt_csv = 'ac21_alt.csv'  # alternative matrix
+    #outfile_A = 'model_A{}_21.txt'
+    #outfile_B = 'model_B{}_21.txt' 
+
+    bc_file = 'test.txt'
+    ref_csv = 'test_ref.csv'
+    alt_csv = 'test_alt.csv'
+    outfile_A = 'model_A{}_de.txt'
+    outfile_B = 'model_B{}_de.txt'
+    outfile_g = 'model_genotypes{}{}_de.csv'
 
     all_SNVs = []  # list of SNV_data objects
     matrix = pd.read_csv(ref_csv)
@@ -311,4 +300,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
