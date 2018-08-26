@@ -12,8 +12,6 @@ import datetime
 import csv
 from scipy.stats import binom
 
-BASE_RR_PROB = BASE_RA_PROB = BASE_AA_PROB = 0.3333 
-
 class SNV_data:
     """
     Stores data on each SNV
