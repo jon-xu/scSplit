@@ -82,7 +82,7 @@ class models:
 
     def calculate_model_genotypes(self):
         """
-	    Initialise model from dirichlet distribution
+	    Initialise model from beta distribution
 	    """
         if self.model_genotypes == []:
             for n in range(self.num):
@@ -165,11 +165,6 @@ class models:
 
                     ref_count = self.ref_bc_mtx.loc[pos, barcode]   # count of ref reads at a SNV position from a cell
                     alt_count = self.alt_bc_mtx.loc[pos, barcode]
-                    tot_count = ref_count + alt_count
-
-                    # calculate probability of alt_count in the barcode at the SNV conditioned on general genotype
-                    # probability of A in RR/RA/AA is 0.01, 0.5, 0.99
-                    P_A_g = binom.pmf(alt_count, tot_count, (err, 0.5, 1-err))
 
                     # calculate P(c|S_n) for the SNV, sum of the three P_c_given_g,S for model n
                     P_c_Sv = sum(P_A_g * self.model_genotypes[n].loc[pos])
