@@ -108,10 +108,6 @@ def build_base_calls_matrix(sam_filename, all_SNVs, all_POS, barcodes):
 
 
 def main():
-    # filepaths
-    path = ''
-    out_dir = ''
-
 
     """ The following is various files used while testing the program
     file_v = .vcf file
@@ -126,11 +122,7 @@ def main():
     out_csv_ref = 'ac21_ref.csv'
     out_csv_alt = 'ac21_alt.csv'
 
-    vcf_filename = str(path + out_dir + file_v)
-    sam_filename = str(path + out_dir + file_s)
-    bc_filename = str(path + out_dir + file_bc)
-
-    in_vcf = vcf.Reader(open(vcf_filename, 'r'))
+    in_vcf = vcf.Reader(open(file_v, 'r'))
 
     vcf_records = []
     for record in in_vcf:
@@ -144,9 +136,9 @@ def main():
 
     print("Starting data collection", datetime.datetime.now().time())
     all_POS = SNV_data.get_all_SNV_pos(all_SNVs)
-    barcodes = get_all_barcodes(bc_filename)
+    barcodes = get_all_barcodes(file_bc)
 
-    base_calls_mtx = build_base_calls_matrix(sam_filename, all_SNVs,
+    base_calls_mtx = build_base_calls_matrix(file_s, all_SNVs,
                                              all_POS,barcodes)
     base_calls_mtx[0].to_csv('{}{}{}'.format(path, out_dir, out_csv_ref))
     base_calls_mtx[1].to_csv('{}{}{}'.format(path, out_dir, out_csv_alt))
