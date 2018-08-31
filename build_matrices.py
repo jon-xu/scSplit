@@ -61,17 +61,17 @@ def get_all_barcodes(bc_file):
     return barcodes
 
 
-def build_base_calls_matrix(sam_filename, all_SNVs, all_POS, barcodes):
+def build_base_calls_matrix(file_s, all_SNVs, all_POS, barcodes):
     """
     Build pandas DataFrame
     Parameters:
-        sam_filename(str): Path to sam file (0-based positions)
+        file_s(str): Path to sam file (0-based positions)
         all_SNVs: list of SNV_data objects
         all_POS(list('chr:pos)): snv positions (1-based positions from vcf file)
         barcodes(list): cell barcodes
     """
 
-    in_sam = ps.AlignmentFile(sam_filename, 'rb')
+    in_sam = ps.AlignmentFile(file_s, 'rb')
     ref_base_calls_mtx = pd.DataFrame(np.zeros((len(all_POS), len(barcodes))),
                                       index=all_POS, columns=barcodes)
     alt_base_calls_mtx = pd.DataFrame(np.zeros((len(all_POS), len(barcodes))),
@@ -140,8 +140,8 @@ def main():
 
     base_calls_mtx = build_base_calls_matrix(file_s, all_SNVs,
                                              all_POS,barcodes)
-    base_calls_mtx[0].to_csv('{}{}{}'.format(path, out_dir, out_csv_ref))
-    base_calls_mtx[1].to_csv('{}{}{}'.format(path, out_dir, out_csv_alt))
+    base_calls_mtx[0].to_csv('{}'.format(out_csv_ref))
+    base_calls_mtx[1].to_csv('{}'.format(out_csv_alt))
     print("Base call matrix finished", datetime.datetime.now().time())
 
 
