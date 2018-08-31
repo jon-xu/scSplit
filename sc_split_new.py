@@ -8,6 +8,7 @@ import pdb
 import sys
 import numpy as np
 import pandas as pd
+import math
 import datetime
 import csv
 from scipy.stats import binom
@@ -87,21 +88,18 @@ class models:
         if self.model_genotypes == []:
             for n in range(self.num):
                 self.model_genotypes.append([])
-                self.model_genotypes[n] = pd.DataFrame(np.zeros((len(self.all_SNVs), 3)),
-                    index=SNV_data.get_all_SNV_pos(self.all_SNVs), columns=['RR', 'RA', 'AA'])
-
-            for n in range(self.num):
+                self.model_genotypes[n] = pd.DataFrame(np.zeros((len(self.all_SNVs), 1)),
+                    index=SNV_data.get_all_SNV_pos(self.all_SNVs), columns=['A'])
                 beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(SNV_data.get_all_SNV_pos(self.all_SNVs)), self.num))
-                gt = [item[0] for item in beta_sim]   # take the first value of each pair in the distribution results
                 i = 0
                 for snv in self.all_SNVs:
                     pos = "{}:{}".format(snv.CHROM, snv.POS)
-                    self.model_genotypes[n].loc[pos] = (gt[i]**2, 2*gt[i]*(1-gt[i]), (1-gt[i])**2)   # based on Hardy-Weinberg equilibrium
+                    self.model_genotypes[n].loc[pos] = [item[1] for item in beta_sim][i]   # take the simulated alternative allele count 
                     i += 1
 
         else:
             """
-            Update the probability distribution <RR, RA, AA> for each SNV position based on counts of bases
+            Update the alternative allele probability for each SNV position based on counts of bases
 
             Input:
                 bc_mtx: SNV-barcode matrix containing lists of base calls
@@ -119,9 +117,7 @@ class models:
                         A_sv += self.P_s_c.loc[barcode, n] * self.alt_bc_mtx.loc[pos, barcode]
                         T_sv += self.P_s_c.loc[barcode, n] * (self.alt_bc_mtx.loc[pos, barcode] + self.ref_bc_mtx.loc[pos, barcode])
                     
-                    if A_sv > 0 or T_sv > 0:      # if cells assigned in model carry reads at this snv
-                        P_A_S = (A_sv + 1) / (T_sv + 2)       # probability of alt counts, with pseudo counts
-                        self.model_genotypes[n].loc[pos] = ((1-P_A_S)**2, 2*P_A_S*(1-P_A_S), P_A_S**2)   # derive genotype probabilities using observed ALT probability, HWE
+                    self.model_genotypes[n].loc[pos] = (A_sv + 1) / (T_sv + 2)   # derive genotype probabilities using observed ALT probability
 
 
     def calculate_cell_likelihood(self):
@@ -158,7 +154,7 @@ class models:
             for idx in self.alt_bc_mtx.loc[:, barcode].nonzero():
                 indices.extend(idx)
             for n in range(self.num):  # for each model
-                all_var_llhood = 1  # initialise the product over all variants for model n
+                all_var_llhood = 0  # initialise the product over all variants for model n
                 for i in indices:  # for each SNV with non-zero values in this cell
                     snv = self.all_SNVs[i]
                     pos = "{}:{}".format(snv.CHROM, snv.POS)
@@ -167,16 +163,15 @@ class models:
                     alt_count = self.alt_bc_mtx.loc[pos, barcode]
 
                     # calculate P(c|S_n) for the SNV, sum of the three P_c_given_g,S for model n
-                    P_c_Sv = sum(P_A_g * self.model_genotypes[n].loc[pos])
+                    l_P_c_Sv = alt_count * math.log2(self.model_genotypes[n].loc[pos]) + ref_count * math.log2(1 - self.model_genotypes[n].loc[pos])
 
                     # Product over all variant positions
-                    all_var_llhood *= P_c_Sv
+                    all_var_llhood += l_P_c_Sv
 
-                self.P_c_s.loc[barcode,n] = all_var_llhood  # array of [P(c|S_1), P(c|S_2)] for each model
+                self.P_c_s.loc[barcode,n] = 2 ** all_var_llhood  # array of [P(c|S_1), P(c|S_2)] for each model
 
             # transform the P(c|S_n) of all cells into posterior probability, assuming P(S_n) are all equal (prior probability)
             self.P_s_c = self.P_c_s.div(self.P_c_s.sum(axis=1), axis=0)
-
 
 
     def assign_cells(self):
@@ -205,7 +200,7 @@ def run_model(all_SNVs, base_calls_mtx, barcodes, num_models):
     iterations = 0
     sum_log_likelihoods = []
 
-    while iterations < 20:
+    while iterations < 6:
 
         iterations += 1
 
@@ -222,14 +217,14 @@ def run_model(all_SNVs, base_calls_mtx, barcodes, num_models):
     model.assign_cells()
 
     for n in range(num_models):
-        with open('barcodes_{}_de.csv'.format(n), 'w') as myfile:
+        with open('barcodes_{}_f_simple_6.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
 
-        model.model_genotypes[n].to_csv('model_genotypes{}_de.csv'.format(n))
+        model.model_genotypes[n].to_csv('model_genotypes{}_f_simple_6.csv'.format(n))
 
-    model.P_c_s.to_csv('P_c_s.csv')
-    model.P_s_c.to_csv('P_s_c.csv')
+    model.P_c_s.to_csv('P_c_s_f_simple_6.csv')
+    model.P_s_c.to_csv('P_s_c_f_simple_6.csv')
     
     print("Finished model at {}".format(datetime.datetime.now().time()))
     print(sum_log_likelihoods)
@@ -265,18 +260,13 @@ def main():
     num_models = 2          # number Fof models in each run
 
     # Mixed donor files
-    #bc_file = "bc_sorted.txt"   # validated cell barcodes
-    #ref_csv = 'ac21_ref.csv'  # reference matrix
-    #alt_csv = 'ac21_alt.csv'  # alternative matrix
-    #outfile_A = 'model_A{}_21.txt'
-    #outfile_B = 'model_B{}_21.txt' 
+    bc_file = "bc_sorted.txt"   # validated cell barcodes
+    ref_csv = 'ref_filtered.csv'  # reference matrix
+    alt_csv = 'alt_filtered.csv'  # alternative matrix
 
-    bc_file = 'test.txt'
-    ref_csv = 'test_ref.csv'
-    alt_csv = 'test_alt.csv'
-    outfile_A = 'model_A{}_de.txt'
-    outfile_B = 'model_B{}_de.txt'
-    outfile_g = 'model_genotypes{}{}_de.csv'
+    #bc_file = 'test.txt'
+    #ref_csv = 'test_ref.csv'
+    #alt_csv = 'test_alt.csv'
 
     all_SNVs = []  # list of SNV_data objects
     matrix = pd.read_csv(ref_csv)
