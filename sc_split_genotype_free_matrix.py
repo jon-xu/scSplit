@@ -13,54 +13,25 @@ import datetime
 import csv
 from scipy.stats import binom
 
-class SNV_data:
-    """
-    Stores data on each SNV
-    """
-
-    def __init__(self, chrom_pos):
-        """
-        Parameters:
-            chrom (int): chromosome number
-            pos (int): position on chromosome
-        """
-        self.CHROM = chrom_pos.split(':')[0] 
-        self.POS = chrom_pos.split(':')[1]
-
-    def get_all_SNV_pos(all_SNVs):
-        """
-        Return ordered list of positions of SNVs as chr:pos
-        Parameters:
-            all_SNVs (list(SNV_data obj)): list of SNV_data objects
-        Returns:
-            sorted list of SNV unique positions as chr:pos
-        """
-        all_POS = []
-        for entry in all_SNVs:
-            pos = str(entry.CHROM) + ':' + str(entry.POS)
-            if pos not in all_POS:
-                all_POS.append(pos)
-        return all_POS
-
 class models:
-    def __init__(self, all_SNVs, base_calls_mtx, barcodes, num=2, model_genotypes=[], assigned=None, P_c_s=[], P_s_c=[]):
+    def __init__(self, base_calls_mtx, all_POS=[], barcodes=[], num=2, model_genotypes=[], assigned=None, P_c_s=[], P_s_c=[]):
         """
         A complete model class containing SNVs, matrices counts, barcodes, model genotypes with assigned cells 
 
         Parameters:
-             all_SNVs: list[SNV_data objects]
              base_calls_mtx: SNV-barcode matrix containing lists of base calls
-             num(int): number of individual model genotypes
+             all_POS: list of SNVs
              barcodes: list of cell barcodes
+             num(int): number of individual model genotypes
              model_genotypes(list(DataFrame): list of num model genotypes represented in snv-probdistrib DataFrame as <RR,RA,AA>
+             assigned(list): final lists of cell/barcode assigned to each genotype cluster/model	     
              P_s_c: barcode/sample matrix containing the probability of seeing sample s with observation of barcode c
              P_c_s: barcode/sample matrix containing the probability of seeing barcode c under sample s, whose sum should increase by iterations, as a model indicator 
-             assigned(list): final lists of cell/barcode assigned to each genotype cluster/model	     
         """
-        self.all_SNVs = all_SNVs
         self.ref_bc_mtx = base_calls_mtx[0]
         self.alt_bc_mtx = base_calls_mtx[1]
-        self.barcodes = barcodes
+        self.all_POS = self.ref_bc_mtx.index.values.tolist()
+        self.barcodes = self.ref_bc_mtx.columns.values.tolist()
         self.num = num
 
         self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
@@ -73,11 +44,12 @@ class models:
         for _ in range(self.num):
             self.assigned.append([])
 
-        self.model_genotypes = pd.DataFrame(np.zeros((len(self.all_SNVs), self.num)),
-                    index=SNV_data.get_all_SNV_pos(self.all_SNVs), columns=range(self.num))
+        self.model_genotypes = pd.DataFrame(np.zeros((len(self.all_POS), self.num)),
+                    index=self.all_POS, columns=range(self.num))
 
         for n in range(self.num):
-            beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(SNV_data.get_all_SNV_pos(self.all_SNVs)), self.num))
+            pdb.set_trace()
+            beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), self.num))
             self.model_genotypes.loc[:, n] = [item[1] for item in beta_sim]
 
     def calculate_model_genotypes(self):
@@ -122,9 +94,9 @@ class models:
             self.assigned[n] = sorted(self.assigned[n])
 
 
-def run_model(all_SNVs, base_calls_mtx, barcodes, num_models):
+def run_model(base_calls_mtx, num_models):
 
-    model = models(all_SNVs, base_calls_mtx, barcodes, num_models)
+    model = models(base_calls_mtx, num_models)
 
     print("Commencing E-M")
     
@@ -160,20 +132,6 @@ def run_model(all_SNVs, base_calls_mtx, barcodes, num_models):
     print("Finished model at {}".format(datetime.datetime.now().time()))
     print(sum_log_likelihoods)
 
-def get_all_barcodes(bc_file):
-    """
-    Load barcodes from text file
-    Parameters:
-        bc_file: text file of line separated cell barcodes
-    Returns:
-        list of cell barcodes
-    """
-    file = open(bc_file, 'r')
-    barcodes = []
-    for line in file:
-        barcodes.append(line.strip())
-    return barcodes
-
 
 def read_base_calls_matrix(ref_csv, alt_csv):
     """ Read in an existing matrix from a csv file"""
@@ -188,7 +146,7 @@ def read_base_calls_matrix(ref_csv, alt_csv):
 
 def main():
 
-    num_models = 2          # number Fof models in each run
+    num_models = 2          # number of models in each run
 
     # Mixed donor files
     # bc_file = "bc_sorted.txt"   # validated cell barcodes
@@ -199,18 +157,12 @@ def main():
     ref_csv = 'test_ref.csv'
     alt_csv = 'test_alt.csv'
 
-    all_SNVs = []  # list of SNV_data objects
-    matrix = pd.read_csv(ref_csv)
-    for record in matrix.loc[:,'SNV']:
-        all_SNVs.append(SNV_data(record))
-    
     print ("Starting data collection", datetime.datetime.now().time())
     
-    all_POS = SNV_data.get_all_SNV_pos(all_SNVs)
-    barcodes = get_all_barcodes(bc_file)
     base_calls_mtx = read_base_calls_matrix(ref_csv, alt_csv)
 
-    run_model(all_SNVs, base_calls_mtx, barcodes, num_models)
+    run_model(base_calls_mtx, num_models)
 
 if __name__ == "__main__":
     main()
+
