@@ -70,7 +70,6 @@ class models:
         """
 
         for n in range(self.num):
-            matcalc = pd.DataFrame(np.zeros_like(self.ref_bc_mtx), index=self.ref_bc_mtx.index, columns=self.ref_bc_mtx.columns)
             matcalc = self.alt_bc_mtx.multiply(self.model_genotypes.loc[:, n].apply(np.log2), axis=0) \
                     + self.ref_bc_mtx.multiply((1 - self.model_genotypes.loc[:, n]).apply(np.log2), axis=0)
             self.P_c_s.loc[:, n] = 2 ** matcalc.sum(axis=0)
