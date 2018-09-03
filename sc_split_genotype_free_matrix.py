@@ -63,11 +63,11 @@ class models:
         self.barcodes = barcodes
         self.num = num
 
-        self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), num)),
-                    index = self.barcodes, columns = list(range(num)))
+        self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
+                    index = self.barcodes, columns = list(range(self.num)))
 
-        self.P_c_s = pd.DataFrame(np.zeros((len(self.barcodes), num)),
-                    index = self.barcodes, columns = list(range(num)))
+        self.P_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
+                    index = self.barcodes, columns = list(range(self.num)))
 
         self.assigned = []
         for _ in range(self.num):
