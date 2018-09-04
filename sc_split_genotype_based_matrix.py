@@ -6,28 +6,30 @@ Aug 2018
 
 import pdb
 import sys
+import math
 import numpy as np
 import pandas as pd
-import math
+from scipy.stats import binom
 import datetime
 import csv
-from scipy.stats import binom
-
 
 class models:
-    def __init__(self, base_calls_mtx, all_POS=[], barcodes=[], num=2, model_genotypes=[], assigned=None, P_c_s=[], P_s_c=[], p_aa_d=[], p_ra_d=[], p_rr_d=[]):
+    def __init__(self, base_calls_mtx, num=2):
         """
         A complete model class containing SNVs, matrices counts, barcodes, model genotypes with assigned cells 
 
         Parameters:
-             base_calls_mtx: SNV-barcode matrix containing lists of base calls
-             all_POS: list of SNVs
-             barcodes: list of cell barcodes
-             num(int): number of individual model genotypes
-             model_genotypes(list(DataFrame): list of num model genotypes represented in snv-probdistrib DataFrame as <RR,RA,AA>
-             assigned(list): final lists of cell/barcode assigned to each genotype cluster/model	     
-             P_s_c: barcode/sample matrix containing the probability of seeing sample s with observation of barcode c
-             P_c_s: barcode/sample matrix containing the probability of seeing barcode c under sample s, whose sum should increase by iterations, as a model indicator
+             base_calls_mtx(list of Dataframes): SNV-barcode matrix containing lists of base calls
+             all_POS(list): list of SNVs positions
+             barcodes(list): list of cell barcodes
+             num(int): number of total samples
+             P_s_c(DataFrame): barcode/sample matrix containing the probability of seeing sample s with observation of barcode c
+             P_c_s(DataFrame: barcode/sample matrix containing the likelihood of seeing barcode c under sample s, whose sum should increase by each iteration
+             assigned(list): final lists of cell/barcode assigned to each genotype cluster/model
+             model_genotypes(list(DataFrame): list of num model genotypes represented in snv-prob distrib DataFrame as <RR,RA,AA>
+             p_d_aa, p_d_ra, p_d_rr(DataFrame): SNV/barcode matrix containing P(D|AA), P(D|RA), P(D|RR)
+             p_aa_d, p_ra_d, p_rr_d(DataFrame): SNV/barcode matrix containing P(AA|D), P(RA|D), P(RR|D)
+
         """
         self.ref_bc_mtx = base_calls_mtx[0]
         self.alt_bc_mtx = base_calls_mtx[1]
@@ -45,20 +47,17 @@ class models:
 
         for n in range(self.num):
             self.model_genotypes.append([])
-            #self.model_genotypes[n] = pd.DataFrame(np.zeros((len(self.all_POS), 3)),
-                #index=all_POS, columns=['RR','RA','AA'])
+
             # generate random dirichlet distribution to simulate genotypes probability
             self.model_genotypes[n] = pd.DataFrame(np.random.dirichlet((25,50,25),len(self.all_POS)),
                 index=self.all_POS, columns=['RR','RA','AA'])
 
-        err = 0.01
+        err = 0.01  # error rate assumption
 
-        p_d_aa = pd.DataFrame(binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), 1-err),
-                index=self.all_POS, columns=self.barcodes)
-        p_d_ra = pd.DataFrame(binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), 0.5),
-                index=self.all_POS, columns=self.barcodes)
-        p_d_rr = pd.DataFrame(binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), err),
-                index=self.all_POS, columns=self.barcodes)
+        # binomial probability for P(D|AA,RA,RR) with the alt count vs total count condition and (err, 0.5, 1-err) genotype probability
+        self.p_d_aa = pd.DataFrame(binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), 1-err), index=self.all_POS, columns=self.barcodes)
+        self.p_d_ra = pd.DataFrame(binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), 0.5), index=self.all_POS, columns=self.barcodes)
+        self.p_d_rr = pd.DataFrame(binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), err), index=self.all_POS, columns=self.barcodes)
 
         self.p_aa_d = p_d_aa / (p_d_aa + p_d_ra + p_d_rr)
         self.p_ra_d = p_d_ra / (p_d_aa + p_d_ra + p_d_rr)
@@ -66,9 +65,8 @@ class models:
 
     def calculate_model_genotypes(self):
         """
-        Update the model genotype based on alternative allele probability for each SNV position based on counts of bases
-            Input: self.ref_bc_mtx, self.alt_bc_mtx, P_s_c
-            Output: self.model_genotypes
+        Update the model genotype by simulating the count distribution using P(s|c) and P(g|D) of each barcode on a certain snv to the model
+
         """
 
         for n in range(self.num):
@@ -79,40 +77,31 @@ class models:
 
     def calculate_cell_likelihood(self):
         """
-        Calculate cell|sample likelihood and derive sample|cell probability
-        Input: self.model_genotypes, self.ref_bc_mtx, self.alt_bc_mtx
-        Output: self.P_c_s, self.P_s_c
+        Calculate cell|sample likelihood P(c|s) and derive sample|cell probability P(s|c)
+        P(c|s_v) = P(D|AA) * P(g_AA|s) + P(D|RA) * P(g_RA|s) + P(D|RR) * P(g_RR|s)
+        log(P(c|s)) = sum_v(P(c|s_v))
+        P(s_n|c) = P(c|s_n) / [P(c|s_1) + P(c|s_2) + ... + P(c|s_n)]
+
         """
+
         err = 0.01
 
         for n in range(self.num):
-            rr = pd.DataFrame(data=binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), err), index=self.alt_bc_mtx.index, columns=self.alt_bc_mtx.columns)
-            ra = pd.DataFrame(data=binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), 0.5), index=self.alt_bc_mtx.index, columns=self.alt_bc_mtx.columns)
-            aa = pd.DataFrame(data=binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), 1-err), index=self.alt_bc_mtx.index, columns=self.alt_bc_mtx.columns)
-            matcalc = rr.multiply(self.model_genotypes[n].loc[:,'RR'], axis=0) + \
-                      ra.multiply(self.model_genotypes[n].loc[:,'RA'], axis=0) + \
-                      aa.multiply(self.model_genotypes[n].loc[:,'AA'], axis=0)
-            
-            #matcalc = pd.DataFrame(np.zeros_like(self.ref_bc_mtx), index=self.ref_bc_mtx.index, columns=self.ref_bc_mtx.columns)
+            matcalc = self.p_d_rr.multiply(self.model_genotypes[n].loc[:,'RR'], axis=0) + \
+                      self.p_d_ra.multiply(self.model_genotypes[n].loc[:,'RA'], axis=0) + \
+                      self.p_d_aa.multiply(self.model_genotypes[n].loc[:,'AA'], axis=0)            
             self.P_c_s.loc[:, n] = 2 ** (matcalc.apply(np.log2).sum(axis=0))
         self.P_s_c = self.P_c_s.div(self.P_c_s.sum(axis=1), axis=0)
 
 
     def assign_cells(self):
         """
-	    final assignment of cells according to model genotypes
-	    """
+        Final assignment of cells according to P(s|c) > 0.8
 
-        for barcode in self.barcodes:  # for each of all cells
-
-            # if likelihood is equal in cases such as: barcode has no coverage over any snv region
-            # actual cell assignment step
-            if self.P_s_c.loc[barcode,:].max() >= 0.8:
-                n = pd.Series.idxmax(self.P_s_c.loc[barcode,:])
-                self.assigned[n].append(barcode)
+        """
 
         for n in range(self.num):
-            self.assigned[n] = sorted(self.assigned[n])
+            self.assigned[n] = sorted(self.P_s_c.loc[self.P_s_c[n] >= 0.8])
 
 
 def run_model(base_calls_mtx, num_models):
@@ -124,15 +113,17 @@ def run_model(base_calls_mtx, num_models):
     iterations = 0
     sum_log_likelihoods = []
 
-    while iterations < 6:
-
+    while iterations < 3:
         iterations += 1
+        print("Iteration {}".format(iterations))
 
         print("calculating cell likelihood ", datetime.datetime.now().time())
         model.calculate_cell_likelihood()
+        print("cell origin probabilities ", model.P_s_c)
 
         print("calculating model ", datetime.datetime.now().time())
         model.calculate_model_genotypes()
+        print("model_genotypes: ", model.model_genotypes)
 
         sum_log_likelihood = model.P_c_s.apply(np.log10).sum().sum()
         sum_log_likelihoods.append(sum_log_likelihood)
@@ -141,14 +132,9 @@ def run_model(base_calls_mtx, num_models):
     model.assign_cells()
 
     for n in range(num_models):
-        with open('barcodes_{}_f_simple_6.csv'.format(n), 'w') as myfile:
+        with open('barcodes_{}_f_simple_3.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
-
-        model.model_genotypes[n].to_csv('model_genotypes{}_f_simple_6.csv'.format(n))
-
-    model.P_c_s.to_csv('P_c_s_f_simple_6.csv')
-    model.P_s_c.to_csv('P_s_c_f_simple_6.csv')
     
     print("Finished model at {}".format(datetime.datetime.now().time()))
     print(sum_log_likelihoods)
