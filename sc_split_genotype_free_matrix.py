@@ -70,7 +70,7 @@ class models:
             matcalc = self.alt_bc_mtx.multiply(self.model_genotypes.loc[:, n].apply(np.log2), axis=0) \
                     + self.ref_bc_mtx.multiply((1 - self.model_genotypes.loc[:, n]).apply(np.log2), axis=0)
             self.P_c_s.loc[:, n] = 2 ** (matcalc.sum(axis=0) + 800)
-        self.P_s_c = self.P_c_s.div(self.P_c_s.sum(axis=1), axis=0)
+        self.P_s_c = self.P_c_s.div(self.P_c_s.sum(axis=1), axis=0).fillna(0)
 
 
     def assign_cells(self):
