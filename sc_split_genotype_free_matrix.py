@@ -137,11 +137,9 @@ def main():
     num_models = 2          # number of models in each run
 
     # Mixed donor files
-    # bc_file = "bc_sorted.txt"   # validated cell barcodes
     # ref_csv = 'ref_filtered.csv'  # reference matrix
     # alt_csv = 'alt_filtered.csv'  # alternative matrix
 
-    bc_file = 'test.txt'
     ref_csv = 'test_ref.csv'
     alt_csv = 'test_alt.csv'
 
