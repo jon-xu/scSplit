@@ -92,7 +92,7 @@ def run_model(base_calls_mtx, num_models):
     iterations = 0
     sum_log_likelihoods = []
 
-    while iterations < 3:
+    while iterations < 6:
         iterations += 1
         print("Iteration {}".format(iterations))
 
@@ -111,7 +111,7 @@ def run_model(base_calls_mtx, num_models):
     model.assign_cells()
 
     for n in range(num_models):
-        with open('barcodes_{}_f_simple_3.csv'.format(n), 'w') as myfile:
+        with open('barcodes_{}_simple_6.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
     
