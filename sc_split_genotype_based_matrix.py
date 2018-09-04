@@ -96,12 +96,12 @@ class models:
 
     def assign_cells(self):
         """
-        Final assignment of cells according to P(s|c) > 0.8
+        Final assignment of cells according to P(s|c) > 0.9
 
         """
 
         for n in range(self.num):
-            self.assigned[n] = sorted(self.P_s_c.loc[self.P_s_c[n] >= 0.8].index.values.tolist())
+            self.assigned[n] = sorted(self.P_s_c.loc[self.P_s_c[n] >= 0.9].index.values.tolist())
 
 
 def run_model(base_calls_mtx, num_models):
