@@ -59,9 +59,9 @@ class models:
         self.p_d_ra = pd.DataFrame(binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), 0.5), index=self.all_POS, columns=self.barcodes)
         self.p_d_rr = pd.DataFrame(binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), err), index=self.all_POS, columns=self.barcodes)
 
-        self.p_aa_d = p_d_aa / (p_d_aa + p_d_ra + p_d_rr)
-        self.p_ra_d = p_d_ra / (p_d_aa + p_d_ra + p_d_rr)
-        self.p_rr_d = p_d_rr / (p_d_aa + p_d_ra + p_d_rr)
+        self.p_aa_d = self.p_d_aa / (self.p_d_aa + self.p_d_ra + self.p_d_rr)
+        self.p_ra_d = self.p_d_ra / (self.p_d_aa + self.p_d_ra + self.p_d_rr)
+        self.p_rr_d = self.p_d_rr / (self.p_d_aa + self.p_d_ra + self.p_d_rr)
 
     def calculate_model_genotypes(self):
         """
