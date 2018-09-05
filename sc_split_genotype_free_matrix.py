@@ -116,10 +116,12 @@ def run_model(base_calls_mtx, num_models):
     model.assign_cells()
 
     for n in range(num_models):
-        with open('barcodes_{}_simple_6.csv'.format(n), 'w') as myfile:
+        with open('barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
     
+    model.P_s_c.to_csv('P_s_c.csv')
+
     print("Finished model at {}".format(datetime.datetime.now().time()))
     print(sum_log_likelihoods)
 
