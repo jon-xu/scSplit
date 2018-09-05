@@ -24,7 +24,7 @@ class models:
              barcodes(list): list of cell barcodes
              num(int): number of total samples
              P_s_c(DataFrame): barcode/sample matrix containing the probability of seeing sample s with observation of barcode c
-             P_c_s(DataFrame: barcode/sample matrix containing the likelihood of seeing barcode c under sample s, whose sum should increase by each iteration
+             lP_c_s(DataFrame: barcode/sample matrix containing the log likelihood of seeing barcode c under sample s, whose sum should increase by each iteration
              assigned(list): final lists of cell/barcode assigned to each genotype cluster/model
              model_genotypes(list(DataFrame): list of num model genotypes represented in snv-prob distrib DataFrame as <RR,RA,AA>
              p_d_aa, p_d_ra, p_d_rr(DataFrame): SNV/barcode matrix containing P(D|AA), P(D|RA), P(D|RR)
@@ -38,7 +38,7 @@ class models:
         self.num = num
         self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
                     index = self.barcodes, columns = list(range(self.num)))
-        self.P_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
+        self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
                     index = self.barcodes, columns = list(range(self.num)))
         self.model_genotypes = []
         self.assigned = []
@@ -90,8 +90,12 @@ class models:
             matcalc = self.p_d_rr.multiply(self.model_genotypes[n].loc[:,'RR'], axis=0) + \
                       self.p_d_ra.multiply(self.model_genotypes[n].loc[:,'RA'], axis=0) + \
                       self.p_d_aa.multiply(self.model_genotypes[n].loc[:,'AA'], axis=0)            
-            self.P_c_s.loc[:, n] = 2 ** (matcalc.apply(np.log2).sum(axis=0))
-        self.P_s_c = self.P_c_s.div(self.P_c_s.sum(axis=1), axis=0)
+            self.lP_c_s.loc[:, n] = matcalc.sum(axis=0)  # log likelihood to avoid python computation limit of 2^+/-308
+        
+        # log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
+        self.P_s_c.loc[:,0] = 1/(1 + 2 ** (self.lP_c_s.loc[:,1]-self.lP_c_s.loc[:,0]))
+        # P(s2|c) = 1 - P(s1|c)
+        self.P_s_c.loc[:,1] = 1 - self.P_s_c.loc[:,0]
 
 
     def assign_cells(self):
@@ -125,7 +129,7 @@ def run_model(base_calls_mtx, num_models):
         model.calculate_model_genotypes()
         print("model_genotypes: ", model.model_genotypes)
 
-        sum_log_likelihood = model.P_c_s.apply(np.log10).sum().sum()
+        sum_log_likelihood = model.lP_c_s.sum().sum()
         sum_log_likelihoods.append(sum_log_likelihood)
         print("log likelihood of iteration {}".format(iterations), sum_log_likelihood)
 
