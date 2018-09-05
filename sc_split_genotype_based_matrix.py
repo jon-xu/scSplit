@@ -50,7 +50,7 @@ class models:
             # generate random dirichlet distribution to simulate genotypes probability
             self.model_genotypes[n] = pd.DataFrame(np.random.dirichlet((25,50,25),len(self.all_POS)),
                 index=self.all_POS, columns=['RR','RA','AA'])
-
+test
         err = 0.01  # error rate assumption
 
         # binomial probability for P(D|AA,RA,RR) with the alt count vs total count condition and (err, 0.5, 1-err) genotype probability
