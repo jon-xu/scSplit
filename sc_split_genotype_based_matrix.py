@@ -84,8 +84,6 @@ class models:
 
         """
 
-        err = 0.01
-
         for n in range(self.num):
             matcalc = self.p_d_rr.multiply(self.model_genotypes[n].loc[:,'RR'], axis=0) + \
                       self.p_d_ra.multiply(self.model_genotypes[n].loc[:,'RA'], axis=0) + \
