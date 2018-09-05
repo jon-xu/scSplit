@@ -5,6 +5,7 @@ Build SNV/Barcode Matrices (ref/alt) for genotype demultiplexing on pooled scRNA
 import pdb
 import sys
 import vcf  # https://pyvcf.readthedocs.io/en/latest/INTRO.html
+import math
 import numpy as np
 import pysam as ps  # http://pysam.readthedocs.io/en/latest/api.html#sam-bam-files
 import pandas as pd
@@ -23,7 +24,6 @@ class SNV_data:
             pos (int): position on chromosome
             ref (str): reference base
             alt (str): alternate base
-            loglik (tuple(float)): log likelihood of genotypes normalised to most likely allele (RR,RA,AA)
         """
         self.CHROM = chrom
         self.POS = pos
@@ -85,7 +85,7 @@ def build_base_calls_matrix(file_s, all_SNVs, all_POS, barcodes):
             all_POS.append(pos)
     for snv in all_SNVs:
         position = str(snv.CHROM) + ':' + str(snv.POS)
-        # use pysam.AlignedSegment.fetch to replace pysam.AlignedSegment.pileup which doesn't contain barco    de information
+        # use pysam.AlignedSegment.fetch to replace pysam.AlignedSegment.pileup which doesn't contain barcode information
         for read in in_sam.fetch(snv.CHROM, snv.POS-1, snv.POS+1):
             if read.flag < 256:   # only valid reads
                 if (snv.POS - 1) in read.get_reference_positions():
@@ -116,11 +116,12 @@ def main():
     """
 
     # Mixed donor files
-    file_v = "ac21.vcf"
-    file_s = "ac21_q10_rmdup_sorted.bam"
+    file_v = "pbmc_ac_q30.vcf"
+    file_s = "pbmc_ac_q10_filtered_sorted.bam"
     file_bc = "bc_sorted.txt"
-    out_csv_ref = 'ac21_ref.csv'
-    out_csv_alt = 'ac21_alt.csv'
+    out_csv_ref = 'ref_filtered10.csv'
+    out_csv_alt = 'alt_filtered10.csv'
+    epsilon = 0.01
 
     in_vcf = vcf.Reader(open(file_v, 'r'))
 
@@ -130,7 +131,7 @@ def main():
 
     all_SNVs = []  # list of SNV_data objects
     for record in vcf_records:
-        if record.samples[0]['GL'][0] != 0 and record.samples[0]['GL'][2] != 0:
+        if record.samples[0]['GL'][0] < math.log10(1-epsilon) and record.samples[0]['GL'][2] < math.log10(1-epsilon):
             all_SNVs.append(
                 SNV_data(record.CHROM, record.POS, record.REF, record.ALT[0]))
 
