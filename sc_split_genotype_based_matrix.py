@@ -63,6 +63,7 @@ class models:
         self.p_ra_d = self.p_d_ra / (self.p_d_aa + self.p_d_ra + self.p_d_rr)
         self.p_rr_d = self.p_d_rr / (self.p_d_aa + self.p_d_ra + self.p_d_rr)
 
+
     def calculate_model_genotypes(self):
         """
         Update the model genotype by simulating the count distribution using P(s|c) and P(g|D) of each barcode on a certain snv to the model
@@ -90,7 +91,7 @@ class models:
             matcalc = self.p_d_rr.multiply(self.model_genotypes[n].loc[:,'RR'], axis=0) + \
                       self.p_d_ra.multiply(self.model_genotypes[n].loc[:,'RA'], axis=0) + \
                       self.p_d_aa.multiply(self.model_genotypes[n].loc[:,'AA'], axis=0)            
-            self.lP_c_s.loc[:, n] = matcalc.sum(axis=0)  # log likelihood to avoid python computation limit of 2^+/-308
+            self.lP_c_s.loc[:, n] = matcalc.apply(np.log2).sum(axis=0)  # log likelihood to avoid python computation limit of 2^+/-308
         
         # log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
         self.P_s_c.loc[:,0] = 1/(1 + 2 ** (self.lP_c_s.loc[:,1]-self.lP_c_s.loc[:,0]))

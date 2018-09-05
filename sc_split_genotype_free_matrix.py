@@ -48,9 +48,10 @@ class models:
             beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), self.num))
             self.model_genotypes.loc[:, n] = [item[1] for item in beta_sim]
 
+
     def calculate_model_genotypes(self):
         """
-        Update the model genotype by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
+        Update the model genotype (ALT allele likelihood) by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
 
         """
 
