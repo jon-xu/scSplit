@@ -47,7 +47,6 @@ class models:
 
         for n in range(self.num):
             self.model_genotypes.append([])
-
             # generate random dirichlet distribution to simulate genotypes probability
             self.model_genotypes[n] = pd.DataFrame(np.random.dirichlet((25,50,25),len(self.all_POS)),
                 index=self.all_POS, columns=['RR','RA','AA'])
