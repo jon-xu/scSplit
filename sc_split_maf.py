@@ -1,6 +1,8 @@
 """
-Reference free allele frequency demultiplexing on pooled scRNA-seq
-Jon Xu, Caitlin Falconer
+Reference free MAF-based demultiplexing on pooled scRNA-seq
+Jon Xu
+Caitlin Falconer
+Lachlan Coin
 Aug 2018
 """
 
@@ -16,7 +18,7 @@ import csv
 class models:
     def __init__(self, base_calls_mtx, num=2):
         """
-        A complete model class containing SNVs, matrices counts, barcodes, model allele frequency with assigned cells 
+        A complete model class containing SNVs, matrices counts, barcodes, model minor allele frequency with assigned cells 
 
         Parameters:
              base_calls_mtx(list of Dataframes): SNV-barcode matrix containing lists of base calls
@@ -26,7 +28,7 @@ class models:
              P_s_c(DataFrame): barcode/sample matrix containing the probability of seeing sample s with observation of barcode c
              lP_c_s(DataFrame): barcode/sample matrix containing the log likelihood of seeing barcode c under sample s, whose sum should increase by each iteration
              assigned(list): final lists of cell/barcode assigned to each cluster/model
-             model_allelefreq(list): list of num model allele frequencies based on P(A)
+             model_MAF(list): list of num model minor allele frequencies based on P(A)
 
         """
 
@@ -42,21 +44,21 @@ class models:
         self.assigned = []
         for _ in range(self.num):
             self.assigned.append([])
-        self.model_allelefreq = pd.DataFrame(np.zeros((len(self.all_POS), self.num)),
+        self.model_MAF = pd.DataFrame(np.zeros((len(self.all_POS), self.num)),
                     index=self.all_POS, columns=range(self.num))
         for n in range(self.num):
             # use total ref count and alt count to generate probability simulation
             beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), 1))
-            self.model_allelefreq.loc[:, n] = [1 - item[0] for item in beta_sim]   # P(A) = 1 - P(R)
+            self.model_MAF.loc[:, n] = [1 - item[0] for item in beta_sim]   # P(A) = 1 - P(R)
 
 
-    def calculate_model_allelefreq(self):
+    def calculate_model_MAF(self):
         """
-        Update the model allele frequency (Alt) by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
+        Update the model minor allele frequency by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
 
         """
 
-        self.model_allelefreq = (self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2)
+        self.model_MAF = (self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2)
 
 
     def calculate_cell_likelihood(self):
@@ -69,8 +71,8 @@ class models:
         """
 
         for n in range(self.num):
-            matcalc = self.alt_bc_mtx.multiply(self.model_allelefreq.loc[:, n].apply(np.log2), axis=0) \
-                    + self.ref_bc_mtx.multiply((1 - self.model_allelefreq.loc[:, n]).apply(np.log2), axis=0)
+            matcalc = self.alt_bc_mtx.multiply(self.model_MAF.loc[:, n].apply(np.log2), axis=0) \
+                    + self.ref_bc_mtx.multiply((1 - self.model_MAF.loc[:, n]).apply(np.log2), axis=0)
             self.lP_c_s.loc[:, n] = matcalc.sum(axis=0)  # log likelihood to avoid python computation limit of 2^+/-308
 
         # log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
@@ -109,8 +111,8 @@ def run_model(base_calls_mtx, num_models):
         print("cell origin probabilities ", model.P_s_c)
 
         print("calculating model ", datetime.datetime.now().time())
-        model.calculate_model_allelefreq()
-        print("model_allelefreq: ", model.model_allelefreq)
+        model.calculate_model_MAF()
+        print("model_MAF: ", model.model_MAF)
 
         sum_log_likelihood = model.lP_c_s.sum().sum()
         sum_log_likelihoods.append(sum_log_likelihood)
