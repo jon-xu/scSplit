@@ -1,5 +1,5 @@
 """
-Reference free genotype demultiplexing on pooled scRNA-seq
+Reference free allele frequency demultiplexing on pooled scRNA-seq
 Jon Xu, Caitlin Falconer
 Aug 2018
 """
@@ -16,7 +16,7 @@ import csv
 class models:
     def __init__(self, base_calls_mtx, num=2):
         """
-        A complete model class containing SNVs, matrices counts, barcodes, model genotypes with assigned cells 
+        A complete model class containing SNVs, matrices counts, barcodes, model allele frequency with assigned cells 
 
         Parameters:
              base_calls_mtx(list of Dataframes): SNV-barcode matrix containing lists of base calls
@@ -25,8 +25,8 @@ class models:
              num(int): number of total samples
              P_s_c(DataFrame): barcode/sample matrix containing the probability of seeing sample s with observation of barcode c
              lP_c_s(DataFrame): barcode/sample matrix containing the log likelihood of seeing barcode c under sample s, whose sum should increase by each iteration
-             assigned(list): final lists of cell/barcode assigned to each genotype cluster/model
-             model_genotypes(list): list of num model genotypes based on P(AA)
+             assigned(list): final lists of cell/barcode assigned to each cluster/model
+             model_allelefreq(list): list of num model allele frequencies based on P(A)
 
         """
 
@@ -34,7 +34,7 @@ class models:
         self.alt_bc_mtx = base_calls_mtx[1]
         self.all_POS = self.ref_bc_mtx.index.values.tolist()
         self.barcodes = self.ref_bc_mtx.columns.values.tolist()
-        self.num = num
+        self.num = num + 1  # including a background state for doublets
         self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
                     index = self.barcodes, columns = list(range(self.num)))
         self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
@@ -42,20 +42,23 @@ class models:
         self.assigned = []
         for _ in range(self.num):
             self.assigned.append([])
-        self.model_genotypes = pd.DataFrame(np.zeros((len(self.all_POS), self.num)),
+        self.model_allelefreq = pd.DataFrame(np.zeros((len(self.all_POS), self.num)),
                     index=self.all_POS, columns=range(self.num))
-        for n in range(self.num):
-            beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), self.num))
-            self.model_genotypes.loc[:, n] = [item[1] for item in beta_sim]
+        # set background alt count proportion as fixed allele frequency for each SNVs in the model
+        self.model_allelefreq.loc[:, 0] = self.alt_bc_mtx.sum(axis=1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1))
+        for n in range(1,self.num):
+            # use total ref count and alt count to generate probability simulation
+            beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), 1))
+            self.model_allelefreq.loc[:, n] = [1 - item[0] for item in beta_sim]  # P(A) = 1 - P(R)
 
 
-    def calculate_model_genotypes(self):
+    def calculate_model_allelefreq(self):
         """
-        Update the model genotype (ALT allele likelihood) by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
+        Update the model allele frequency (ALT) by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
 
         """
 
-        self.model_genotypes = (self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2)
+        self.model_allelefreq = (self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2)
 
 
     def calculate_cell_likelihood(self):
@@ -68,8 +71,8 @@ class models:
         """
 
         for n in range(self.num):
-            matcalc = self.alt_bc_mtx.multiply(self.model_genotypes.loc[:, n].apply(np.log2), axis=0) \
-                    + self.ref_bc_mtx.multiply((1 - self.model_genotypes.loc[:, n]).apply(np.log2), axis=0)
+            matcalc = self.alt_bc_mtx.multiply(self.model_allelefreq.loc[:, n].apply(np.log2), axis=0) \
+                    + self.ref_bc_mtx.multiply((1 - self.model_allelefreq.loc[:, n]).apply(np.log2), axis=0)
             self.lP_c_s.loc[:, n] = matcalc.sum(axis=0)  # log likelihood to avoid python computation limit of 2^+/-308
 
         # log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
@@ -108,8 +111,8 @@ def run_model(base_calls_mtx, num_models):
         print("cell origin probabilities ", model.P_s_c)
 
         print("calculating model ", datetime.datetime.now().time())
-        model.calculate_model_genotypes()
-        print("model_genotypes: ", model.model_genotypes)
+        model.calculate_model_allelefreq()
+        print("model_allelefreq: ", model.model_allelefreq)
 
         sum_log_likelihood = model.lP_c_s.sum().sum()
         sum_log_likelihoods.append(sum_log_likelihood)
