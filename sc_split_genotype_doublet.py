@@ -90,6 +90,8 @@ class models:
 
         """
 
+        P_s = []
+        
         for n in range(self.num):
             if n == 0:
                 P_s.append(0.02)  # probability of doublet ratio
