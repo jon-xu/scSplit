@@ -1,6 +1,8 @@
 """
-Reference free genotype demultiplexing on pooled scRNA-seq
-Jon Xu, Caitlin Falconer
+Reference free genotype-based demultiplexing on pooled scRNA-seq
+Jon Xu
+Lachlan Coin
+Caitlin Falconer
 Aug 2018
 """
 
@@ -111,7 +113,7 @@ def run_model(base_calls_mtx, num_models):
     model = models(base_calls_mtx, num_models)
     
     iterations = 0
-    sum_log_likelihoods = []
+    sum_log_likelihood = []
 
     # commencing E-M
     while iterations < 6:
@@ -121,7 +123,7 @@ def run_model(base_calls_mtx, num_models):
         print("cell origin probabilities ", model.P_s_c)
         model.calculate_model_genotypes()
         print("model_genotypes: ", model.model_genotypes)
-        sum_log_likelihoods.append(model.lP_c_s.sum().sum())
+        sum_log_likelihood.append(model.lP_c_s.sum().sum())
 
     model.assign_cells()
 
@@ -130,7 +132,7 @@ def run_model(base_calls_mtx, num_models):
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
     model.P_s_c.to_csv('P_s_c_genotype.csv')
-    print(sum_log_likelihoods)
+    print(sum_log_likelihood)
     print("Finished model at {}".format(datetime.datetime.now().time()))
 
 
