@@ -50,7 +50,6 @@ class models:
         for n in range(1, self.num):
             for index in self.all_POS:
                 self.model_MAF.loc[index, n] = np.random.beta((self.alt_bc_mtx.loc[index,:].sum()+1), (self.ref_bc_mtx.loc[index,:].sum()+1))
-
                 # use total ref count and alt count to generate probability simulation
                 #beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), 1))
                 #self.model_MAF.loc[:, n] = [1 - item[0] for item in beta_sim]  # P(A) = 1 - P(R)
@@ -63,7 +62,7 @@ class models:
         """
 
         self.model_MAF = (self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2)
-        self.model_MAF.loc[:, 0] = self.model_MAF.loc[:,1:self.num].mean(axis=1)
+        self.model_MAF.loc[:, 0] = self.model_MAF.loc[:, 1:(self.num-1)].mean(axis=1)
 
 
     def calculate_cell_likelihood(self):
