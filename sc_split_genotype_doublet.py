@@ -78,8 +78,7 @@ class models:
             self.model_genotypes[n].loc[:, 'AA'] = self.p_aa_d.dot(self.P_s_c[n]) / (self.p_aa_d.dot(self.P_s_c[n]) + self.p_ra_d.dot(self.P_s_c[n]) + self.p_rr_d.dot(self.P_s_c[n]))
             self.model_genotypes[n].loc[:, 'RA'] = self.p_ra_d.dot(self.P_s_c[n]) / (self.p_aa_d.dot(self.P_s_c[n]) + self.p_ra_d.dot(self.P_s_c[n]) + self.p_rr_d.dot(self.P_s_c[n]))
             self.model_genotypes[n].loc[:, 'RR'] = self.p_rr_d.dot(self.P_s_c[n]) / (self.p_aa_d.dot(self.P_s_c[n]) + self.p_ra_d.dot(self.P_s_c[n]) + self.p_rr_d.dot(self.P_s_c[n]))
-        self.model_genotypes[0] = pd.DataFrame(np.tile([0.25,0.5,0.25],[len(self.all_POS),1]),
-                index=self.all_POS, columns=['RR','RA','AA'])
+        self.model_genotypes[0] = pd.DataFrame(np.tile([0.25,0.5,0.25],[len(self.all_POS),1]),index=self.all_POS, columns=['RR','RA','AA'])   # fixed genotype for doublets
 
     def calculate_cell_likelihood(self):
         """
