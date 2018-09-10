@@ -150,7 +150,9 @@ def run_model(base_calls_mtx, num_models):
 
 
 def read_base_calls_matrix(ref_csv, alt_csv):
+
     """ Read in an existing matrix from a csv file"""
+    
     base_calls_mtx = []
     print('reading in reference matrix')
     base_calls_mtx.append(pd.read_csv(ref_csv, header=0, index_col=0))

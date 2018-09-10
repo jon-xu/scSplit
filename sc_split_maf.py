@@ -96,39 +96,30 @@ class models:
 def run_model(base_calls_mtx, num_models):
 
     model = models(base_calls_mtx, num_models)
-
-    print("Commencing E-M")
     
     iterations = 0
     sum_log_likelihoods = []
 
+    # commencing E-M
     while iterations < 15:
         iterations += 1
         print("Iteration {}".format(iterations))
-
-        print("calculating cell likelihood ", datetime.datetime.now().time())
         model.calculate_cell_likelihood()
         print("cell origin probabilities ", model.P_s_c)
-
-        print("calculating model ", datetime.datetime.now().time())
         model.calculate_model_MAF()
         print("model_MAF: ", model.model_MAF)
-
-        sum_log_likelihood = model.lP_c_s.sum().sum()
-        sum_log_likelihoods.append(sum_log_likelihood)
-        print("log likelihood of iteration {}".format(iterations), sum_log_likelihood)
+        sum_log_likelihoods.append(model.lP_c_s.sum().sum())
 
     model.assign_cells()
 
+    # generate outputs
     for n in range(num_models+1):
         with open('barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
-    
     model.P_s_c.to_csv('P_s_c.csv')
-
-    print("Finished model at {}".format(datetime.datetime.now().time()))
     print(sum_log_likelihoods)
+    print("Finished model at {}".format(datetime.datetime.now().time()))
 
 
 def read_base_calls_matrix(ref_csv, alt_csv):
