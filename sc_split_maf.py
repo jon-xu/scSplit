@@ -79,8 +79,8 @@ class models:
         for i in range(self.num):
             denom = 0
             for j in range(self.num):
-                denom += 2 ** (self.lP_c_s.loc[:,j] - self.lP_c_s.loc[:,i])
-            self.P_s_c.loc[:,i] = 1 / denom
+                denom += 2 ** (self.lP_c_s.loc[:, j] - self.lP_c_s.loc[:, i])
+            self.P_s_c.loc[:, i] = 1 / denom
 
 
     def assign_cells(self):
