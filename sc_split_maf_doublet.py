@@ -47,9 +47,12 @@ class models:
         # set background alt count proportion as fixed minor allele frequency for each SNVs in the model
         self.model_MAF.loc[:, 0] = self.alt_bc_mtx.sum(axis=1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1))
         for n in range(1, self.num):
-            # use total ref count and alt count to generate probability simulation
-            beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), 1))
-            self.model_MAF.loc[:, n] = [1 - item[0] for item in beta_sim]  # P(A) = 1 - P(R)
+            for index in self.all_POS:
+                self.model_MAF.loc[index, n] = np.random.beta((self.alt_bc_mtx.loc[index,:].sum()+1), (self.ref_bc_mtx.loc[index,:].sum()+1))
+
+                # use total ref count and alt count to generate probability simulation
+                #beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), 1))
+                #self.model_MAF.loc[:, n] = [1 - item[0] for item in beta_sim]  # P(A) = 1 - P(R)
 
 
     def calculate_model_MAF(self):
@@ -74,20 +77,20 @@ class models:
         P_s = []
 
         for n in range(self.num):
+            matcalc = self.alt_bc_mtx.multiply(self.model_MAF.loc[:, n].apply(np.log2), axis=0) \
+                    + self.ref_bc_mtx.multiply((1 - self.model_MAF.loc[:, n]).apply(np.log2), axis=0)
+            self.lP_c_s.loc[:, n] = matcalc.sum(axis=0)  # log likelihood to avoid python computation limit of 2^+/-308
             if n == 0:
                 P_s.append(0.02)  # probability of doublet ratio
             else:
                 P_s.append((1 - 0.02) / (self.num - 1))  # even distribution of P(s) across all other singlet samples
-            matcalc = self.alt_bc_mtx.multiply(self.model_MAF.loc[:, n].apply(np.log2), axis=0) \
-                    + self.ref_bc_mtx.multiply((1 - self.model_MAF.loc[:, n]).apply(np.log2), axis=0)
-            self.lP_c_s.loc[:, n] = matcalc.sum(axis=0)  # log likelihood to avoid python computation limit of 2^+/-308
-
+    
         # log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
         for i in range(self.num):
             denom = 0
             for j in range(self.num):
-                denom += 2 ** (self.lP_c_s.loc[:,j] + np.log2(P_s[j]) - self.lP_c_s.loc[:,i] - np.log2(P_s[i]))
-            self.P_s_c.loc[:,i] = 1 / denom
+                denom += 2 ** (self.lP_c_s.loc[:, j] + np.log2(P_s[j]) - self.lP_c_s.loc[:, i] - np.log2(P_s[i]))
+            self.P_s_c.loc[:, i] = 1 / denom
 
 
     def assign_cells(self):
@@ -103,39 +106,31 @@ class models:
 def run_model(base_calls_mtx, num_models):
 
     model = models(base_calls_mtx, num_models)
-
-    print("Commencing E-M")
     
     iterations = 0
     sum_log_likelihoods = []
 
+    # commencing E-M
     while iterations < 15:
+
         iterations += 1
         print("Iteration {}".format(iterations))
-
-        print("calculating cell likelihood ", datetime.datetime.now().time())
         model.calculate_cell_likelihood()
         print("cell origin probabilities ", model.P_s_c)
-
-        print("calculating model ", datetime.datetime.now().time())
         model.calculate_model_MAF()
         print("model_MAF: ", model.model_MAF)
-
-        sum_log_likelihood = model.lP_c_s.sum().sum()
-        sum_log_likelihoods.append(sum_log_likelihood)
-        print("log likelihood of iteration {}".format(iterations), sum_log_likelihood)
+        sum_log_likelihoods.append(model.lP_c_s.sum().sum())
 
     model.assign_cells()
 
+    # generate outputs
     for n in range(num_models+1):
         with open('barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
-                myfile.write(str(item) + '\n')
-    
+                myfile.write(str(item) + '\n')    
     model.P_s_c.to_csv('P_s_c.csv')
-
-    print("Finished model at {}".format(datetime.datetime.now().time()))
     print(sum_log_likelihoods)
+    print("Finished model at {}".format(datetime.datetime.now().time()))
 
 
 def read_base_calls_matrix(ref_csv, alt_csv):

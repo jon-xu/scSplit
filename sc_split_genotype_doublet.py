@@ -91,16 +91,16 @@ class models:
         """
 
         P_s = []
-        
+
         for n in range(self.num):
-            if n == 0:
-                P_s.append(0.02)  # probability of doublet ratio
-            else:
-                P_s.append((1 - 0.02) / (self.num - 1))  # even distribution of P(s) across all other singlet samples
             matcalc = self.p_d_rr.multiply(self.model_genotypes[n].loc[:,'RR'], axis=0) + \
                       self.p_d_ra.multiply(self.model_genotypes[n].loc[:,'RA'], axis=0) + \
                       self.p_d_aa.multiply(self.model_genotypes[n].loc[:,'AA'], axis=0)            
             self.lP_c_s.loc[:, n] = matcalc.apply(np.log2).sum(axis=0)  # log likelihood to avoid python computation limit of 2^+/-308
+            if n == 0:
+                P_s.append(0.02)  # probability of doublet ratio
+            else:
+                P_s.append((1 - 0.02) / (self.num - 1))  # even distribution of P(s) across all other singlet samples
         
         # log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
         for i in range(self.num):
@@ -123,39 +123,31 @@ class models:
 def run_model(base_calls_mtx, num_models):
 
     model = models(base_calls_mtx, num_models)
-
-    print("Commencing E-M")
     
     iterations = 0
     sum_log_likelihoods = []
 
+    # commencing E-M
     while iterations < 15:
+
         iterations += 1
         print("Iteration {}".format(iterations))
-
-        print("calculating cell likelihood ", datetime.datetime.now().time())
         model.calculate_cell_likelihood()
         print("cell origin probabilities ", model.P_s_c)
-
-        print("calculating model ", datetime.datetime.now().time())
         model.calculate_model_genotypes()
-        print("model_genotypes: ", model.model_genotypes)
-
-        sum_log_likelihood = model.lP_c_s.sum().sum()
-        sum_log_likelihoods.append(sum_log_likelihood)
-        print("log likelihood of iteration {}".format(iterations), sum_log_likelihood)
+        print("model_MAF: ", model.model_genotypes)
+        sum_log_likelihoods.append(model.lP_c_s.sum().sum())
 
     model.assign_cells()
 
+    # generate outputs
     for n in range(num_models+1):
-        with open('barcodes_{}_genotype.csv'.format(n), 'w') as myfile:
+        with open('barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
-                myfile.write(str(item) + '\n')
-
-    model.P_s_c.to_csv('P_s_c_genotype.csv')
-
-    print("Finished model at {}".format(datetime.datetime.now().time()))
+                myfile.write(str(item) + '\n')    
+    model.P_s_c.to_csv('P_s_c.csv')
     print(sum_log_likelihoods)
+    print("Finished model at {}".format(datetime.datetime.now().time()))
 
 
 def read_base_calls_matrix(ref_csv, alt_csv):
