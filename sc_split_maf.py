@@ -37,10 +37,8 @@ class models:
         self.all_POS = self.ref_bc_mtx.index.values.tolist()
         self.barcodes = self.ref_bc_mtx.columns.values.tolist()
         self.num = num
-        self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
-                    index = self.barcodes, columns = list(range(self.num)))
-        self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
-                    index = self.barcodes, columns = list(range(self.num)))
+        self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
+        self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
         self.assigned = []
         for _ in range(self.num):
             self.assigned.append([])
@@ -66,8 +64,8 @@ class models:
     def calculate_cell_likelihood(self):
         """
         Calculate cell|sample likelihood P(c|s) and derive sample|cell probability P(s|c)
-        P(c|s_v) = P(N(A),N(R)|s) = P(g_A|s)^N(A) * (1-P(g_A|s))^N(R)
-        log(P(c|s)) = sum_v{(N(A)_c,v*log(P(g_A|s)) + N(R)_c,v*log(1-P(g_A|s)))}
+        P(c|s_v) = P(N(A),N(R)|s) = P(A|s)^N(A) * (1-P(A|s))^N(R)
+        log(P(c|s)) = sum_v{(N(A)_c,v*log(P(A|s)) + N(R)_c,v*log(1-P(A|s)))}
         P(s_n|c) = P(c|s_n) / [P(c|s_1) + P(c|s_2) + ... + P(c|s_n)]
 
         """

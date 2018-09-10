@@ -62,7 +62,7 @@ class models:
         """
 
         self.model_MAF = (self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2)
-        self.model_MAF.loc[:, 0] = self.alt_bc_mtx.sum(axis=1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1))
+        self.model_MAF.loc[:, 0] = self.model_MAF.loc[:,1:self.num].mean(axis=1)
 
 
     def calculate_cell_likelihood(self):
