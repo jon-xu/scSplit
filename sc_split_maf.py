@@ -44,14 +44,14 @@ class models:
         self.assigned = []
         for _ in range(self.num):
             self.assigned.append([])
-        self.model_MAF = pd.DataFrame(np.zeros((len(self.all_POS), self.num)),
-                    index=self.all_POS, columns=range(self.num))
+        self.model_MAF = pd.DataFrame(np.zeros((len(self.all_POS), self.num)), index=self.all_POS, columns=range(self.num))
+
         for n in range(self.num):
             for index in self.all_POS:
                 self.model_MAF.loc[index, n] = np.random.beta((self.alt_bc_mtx.loc[index,:].sum()+1), (self.ref_bc_mtx.loc[index,:].sum()+1))
             # use total ref count and alt count to generate probability simulation
             #beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), 1))
-            self.model_MAF.loc[:, n] = [1 - item[0] for item in beta_sim]   # P(A) = 1 - P(R)
+            #self.model_MAF.loc[:, n] = [1 - item[0] for item in beta_sim]   # P(A) = 1 - P(R)
 
 
     def calculate_model_MAF(self):
@@ -78,11 +78,9 @@ class models:
             self.lP_c_s.loc[:, n] = matcalc.sum(axis=0)  # log likelihood to avoid python computation limit of 2^+/-308
 
         # log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
-        for i in range(self.num):
-            denom = 0
-            for j in range(self.num):
-                denom += 2 ** (self.lP_c_s.loc[:, j] - self.lP_c_s.loc[:, i])
-            self.P_s_c.loc[:, i] = 1 / denom
+        self.P_s_c.loc[:,0] = 1/(1 + 2 ** (self.lP_c_s.loc[:,1]-self.lP_c_s.loc[:,0]))
+        # P(s2|c) = 1 - P(s1|c)
+        self.P_s_c.loc[:,1] = 1 - self.P_s_c.loc[:,0]
 
 
     def assign_cells(self):
@@ -116,10 +114,10 @@ def run_model(base_calls_mtx, num_models):
 
     # generate outputs
     for n in range(num_models):
-        with open('barcodes_{}.csv'.format(n), 'w') as myfile:
+        with open('barcodes_MAF_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
-    model.P_s_c.to_csv('P_s_c.csv')
+    model.P_s_c.to_csv('P_s_c_MAF.csv')
     print(sum_log_likelihood)
     print("Finished model at {}".format(datetime.datetime.now().time()))
 

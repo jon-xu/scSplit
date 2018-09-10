@@ -31,6 +31,7 @@ class models:
              p_aa_d, p_ra_d, p_rr_d(DataFrame): SNV/barcode matrix containing P(AA|D), P(RA|D), P(RR|D)
 
         """
+
         self.ref_bc_mtx = base_calls_mtx[0]
         self.alt_bc_mtx = base_calls_mtx[1]
         self.all_POS = self.ref_bc_mtx.index.values.tolist()
