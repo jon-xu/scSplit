@@ -50,9 +50,6 @@ class models:
         for n in range(1, self.num):
             for index in self.all_POS:
                 self.model_MAF.loc[index, n] = np.random.beta((self.alt_bc_mtx.loc[index,:].sum()+1), (self.ref_bc_mtx.loc[index,:].sum()+1))
-                # use total ref count and alt count to generate probability simulation
-                #beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), 1))
-                #self.model_MAF.loc[:, n] = [1 - item[0] for item in beta_sim]  # P(A) = 1 - P(R)
 
 
     def calculate_model_MAF(self):
@@ -62,7 +59,7 @@ class models:
         """
 
         self.model_MAF = (self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2)
-        self.model_MAF.loc[:, 0] = self.model_MAF.loc[:, 1:(self.num-1)].mean(axis=1)
+        self.model_MAF.loc[:, 0] = self.model_MAF.loc[:, 1:(self.num-1)].mean(axis=1)   # reset the background MAF
 
 
     def calculate_cell_likelihood(self):
@@ -95,7 +92,7 @@ class models:
 
     def assign_cells(self):
         """
-	    Final assignment of cells according to P(s|c) > 0.9
+	    Final assignment of cells according to P(s|c) >= 0.9
 
 	    """
 
@@ -118,17 +115,17 @@ def run_model(base_calls_mtx, num_models):
         model.calculate_cell_likelihood()
         print("cell origin probabilities ", model.P_s_c)
         model.calculate_model_MAF()
-        print("model_MAF: ", model.model_MAF)
+        print("model_MAF_d: ", model.model_MAF)
         sum_log_likelihood.append(model.lP_c_s.sum().sum())
 
     model.assign_cells()
 
     # generate outputs
     for n in range(num_models+1):
-        with open('barcodes_{}.csv'.format(n), 'w') as myfile:
+        with open('barcodes_MAF_d_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')    
-    model.P_s_c.to_csv('P_s_c.csv')
+    model.P_s_c.to_csv('P_s_c_MAF_d.csv')
     print(sum_log_likelihood)
     print("Finished model at {}".format(datetime.datetime.now().time()))
 
@@ -151,11 +148,8 @@ def main():
     num_models = 2          # number of models in each run
 
     # Mixed donor files
-    # ref_csv = 'ref_filtered.csv'  # reference matrix
-    # alt_csv = 'alt_filtered.csv'  # alternative matrix
-
-    ref_csv = 'test_ref.csv'
-    alt_csv = 'test_alt.csv'
+    ref_csv = 'ref_filtered.csv'  # reference matrix
+    alt_csv = 'alt_filtered.csv'  # alternative matrix
 
     print ("Starting data collection", datetime.datetime.now().time())
     
