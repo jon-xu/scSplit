@@ -85,7 +85,7 @@ class models:
         """
         Calculate cell|sample likelihood P(c|s) and derive sample|cell probability P(s|c)
         P(c|s_v) = P(D|AA) * P(g_AA|s) + P(D|RA) * P(g_RA|s) + P(D|RR) * P(g_RR|s)
-        log(P(c|s)) = sum_v(P(c|s_v))
+        log(P(c|s)) = sum_v(log(P(c|s_v)))
         P(s_n|c) = P(c|s_n) / [P(c|s_1) + P(c|s_2) + ... + P(c|s_n)]
 
         """
@@ -106,8 +106,8 @@ class models:
         for i in range(self.num):
             denom = 0
             for j in range(self.num):
-                denom += 2 ** (self.lP_c_s.loc[:,j] + np.log2(P_s[j]) - self.lP_c_s.loc[:,i] - np.log2(P_s[i]))
-            self.P_s_c.loc[:,i] = 1 / denom
+                denom += 2 ** (self.lP_c_s.loc[:, j] + np.log2(P_s[j]) - self.lP_c_s.loc[:, i] - np.log2(P_s[i]))
+            self.P_s_c.loc[:, i] = 1 / denom
 
 
     def assign_cells(self):
