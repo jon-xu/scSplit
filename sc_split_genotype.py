@@ -2,7 +2,6 @@
 Reference free genotype-based demultiplexing on pooled scRNA-seq
 Jon Xu
 Lachlan Coin
-Caitlin Falconer
 Aug 2018
 """
 

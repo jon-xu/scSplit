@@ -1,6 +1,7 @@
 """
 Reference free MAF-based demultiplexing on pooled scRNA-seq
-Jon Xu, Caitlin Falconer
+Jon Xu
+Lachlan Coin
 Aug 2018
 """
 
