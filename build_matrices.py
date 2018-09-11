@@ -1,5 +1,8 @@
 """
 Build SNV/Barcode Matrices (ref/alt) for genotype demultiplexing on pooled scRNA-seq
+Jon Xu
+Aug 2018
+jun.xu@uq.edu.au
 """
 
 import pdb
@@ -115,12 +118,13 @@ def main():
     file_bc = .txt file of all known and checked barcodes
     """
 
-    # Mixed donor files
+    # Input and outputs
     file_v = "pbmc_ac_q30.vcf"
     file_s = "pbmc_ac_q10_filtered_sorted.bam"
     file_bc = "bc_sorted.txt"
-    out_csv_ref = 'ref_filtered10.csv'
-    out_csv_alt = 'alt_filtered10.csv'
+    out_csv_ref = 'ref_filtered.csv'
+    out_csv_alt = 'alt_filtered.csv'
+    
     epsilon = 0.01
 
     in_vcf = vcf.Reader(open(file_v, 'r'))

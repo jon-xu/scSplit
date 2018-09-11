@@ -1,6 +1,6 @@
 """
 Reference free genotype demultiplexing on pooled scRNA-seq
-Jon Xu
+Jon Xu (jun.xu@uq.edu.au)
 Lachlan Coin
 Aug 2018
 """
