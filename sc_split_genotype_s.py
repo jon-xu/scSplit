@@ -152,7 +152,7 @@ def read_base_calls_matrix(ref_csv, alt_csv):
 
 def main():
 
-    num_models = 2          # number Fof models in each run
+    num_models = 2          # number of models in each run
 
     # Mixed donor files
     ref_csv = 'ref_filtered.csv'  # reference matrix
