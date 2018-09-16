@@ -75,9 +75,11 @@ class models:
             self.lP_c_s.loc[:, n] = matcalc.sum(axis=0)  # log likelihood to avoid python computation limit of 2^+/-308
 
         # log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
-        self.P_s_c.loc[:,0] = 1 / (1 + 2 ** (self.lP_c_s.loc[:,1]-self.lP_c_s.loc[:,0]))
-        # P(s2|c) = 1 - P(s1|c)
-        self.P_s_c.loc[:,1] = 1 - self.P_s_c.loc[:,0]
+        for i in range(self.num):
+            denom = 0
+            for j in range(self.num):
+                denom += 2 ** (self.lP_c_s.loc[:, j] + np.log2(P_s[j]) - self.lP_c_s.loc[:, i] - np.log2(P_s[i]))
+            self.P_s_c.loc[:, i] = 1 / denom
 
 
     def assign_cells(self):
