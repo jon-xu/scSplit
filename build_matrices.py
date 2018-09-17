@@ -119,8 +119,8 @@ def main():
     """
 
     # Input and outputs
-    file_v = "pbmc_ac_q30.vcf"
-    file_s = "pbmc_ac_q10_filtered_sorted.bam"
+    file_v = "mixed.vcf"
+    file_s = "mixed.bam"
     file_bc = "bc_sorted.txt"
     out_csv_ref = 'ref_filtered.csv'
     out_csv_alt = 'alt_filtered.csv'
