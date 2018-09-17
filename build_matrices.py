@@ -70,7 +70,7 @@ def build_base_calls_matrix(file_s, all_SNVs, all_POS, barcodes):
     Parameters:
         file_s(str): Path to sam file (0-based positions)
         all_SNVs: list of SNV_data objects
-        all_POS(list('chr:pos)): snv positions (1-based positions from vcf file)
+        all_POS(list(chr:pos)): snv positions (1-based positions from vcf file)
         barcodes(list): cell barcodes
     """
 
