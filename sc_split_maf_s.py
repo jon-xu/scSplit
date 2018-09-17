@@ -5,7 +5,6 @@ Lachlan Coin
 Aug 2018
 """
 
-import pdb
 import sys
 import math
 import numpy as np

@@ -5,14 +5,12 @@ Aug 2018
 jun.xu@uq.edu.au
 """
 
-import pdb
 import sys
 import vcf  # https://pyvcf.readthedocs.io/en/latest/INTRO.html
 import math
 import numpy as np
 import pysam as ps  # http://pysam.readthedocs.io/en/latest/api.html#sam-bam-files
 import pandas as pd
-import subprocess
 import datetime
 
 class SNV_data:
@@ -21,58 +19,27 @@ class SNV_data:
     """
 
     def __init__(self, chrom, pos, ref, alt):
-        """
-        Parameters:
-            chrom (int): chromosome number
-            pos (int): position on chromosome
-            ref (str): reference base
-            alt (str): alternate base
-        """
-        self.CHROM = chrom
-        self.POS = pos
-        self.REF = ref
-        self.ALT = alt
 
-    def get_all_SNV_pos(all_SNVs):
-        """
-        Return ordered list of positions of SNVs as chr:pos
-        Parameters:
-            all_SNVs (list(SNV_data obj)): list of SNV_data objects
-        Returns:
-            sorted list of SNV unique positions as chr:pos
-        """
-        all_POS = []
-        for entry in all_SNVs:
-            pos = str(entry.CHROM) + ':' + str(entry.POS)
-            if pos not in all_POS:
-                all_POS.append(pos)
-        return all_POS
+        self.CHROM = chrom   # chromosome number
+        self.POS = pos       # position on chromosome
+        self.REF = ref       # reference base
+        self.ALT = alt       # alternate base
 
 
-def get_all_barcodes(bc_file):
-    """
-    Load barcodes from text file
-    Parameters:
-        bc_file: text file of line separated cell barcodes
-    Returns:
-        list of cell barcodes
-    """
-    file = open(bc_file, 'r')
-    barcodes = []
-    for line in file:
-        barcodes.append(line.strip())
-    return barcodes
-
-
-def build_base_calls_matrix(file_s, all_SNVs, all_POS, barcodes):
+def build_base_calls_matrix(file_s, all_SNVs, barcodes):
     """
     Build pandas DataFrame
     Parameters:
         file_s(str): Path to sam file (0-based positions)
         all_SNVs: list of SNV_data objects
-        all_POS(list(chr:pos)): snv positions (1-based positions from vcf file)
         barcodes(list): cell barcodes
     """
+
+    all_POS = []   # snv positions (1-based positions from vcf file)
+    for entry in all_SNVs:
+        pos = str(entry.CHROM) + ':' + str(entry.POS)
+        if pos not in all_POS:
+            all_POS.append(pos)
 
     in_sam = ps.AlignmentFile(file_s, 'rb')
     ref_base_calls_mtx = pd.DataFrame(np.zeros((len(all_POS), len(barcodes))),
@@ -81,11 +48,6 @@ def build_base_calls_matrix(file_s, all_SNVs, all_POS, barcodes):
                                       index=all_POS, columns=barcodes)
     print('Matrix size: Num Pos:', len(all_POS), 'Num barcodes:', len(barcodes))
 
-    all_POS = []
-    for entry in all_SNVs:
-        pos = str(entry.CHROM) + ':' + str(entry.POS)
-        if pos not in all_POS:
-            all_POS.append(pos)
     for snv in all_SNVs:
         position = str(snv.CHROM) + ':' + str(snv.POS)
         # use pysam.AlignedSegment.fetch to replace pysam.AlignedSegment.pileup which doesn't contain barcode information
@@ -112,43 +74,27 @@ def build_base_calls_matrix(file_s, all_SNVs, all_POS, barcodes):
 
 def main():
 
-    """ The following is various files used while testing the program
-    file_v = .vcf file
-    file_s = .bam file
-    file_bc = .txt file of all known and checked barcodes
-    """
-
     # Input and outputs
     file_v = "mixed.vcf"
     file_s = "mixed.bam"
-    file_bc = "bc_sorted.txt"
+    file_bc = "bc_sorted.txt"   # known and checked barcodes
     out_csv_ref = 'ref_filtered.csv'
     out_csv_alt = 'alt_filtered.csv'
     
     epsilon = 0.01
 
-    in_vcf = vcf.Reader(open(file_v, 'r'))
-
-    vcf_records = []
-    for record in in_vcf:
-        vcf_records.append(record)
-
     all_SNVs = []  # list of SNV_data objects
-    for record in vcf_records:
-        if record.samples[0]['GL'][0] < math.log10(1-epsilon) and record.samples[0]['GL'][2] < math.log10(1-epsilon):
-            all_SNVs.append(
-                SNV_data(record.CHROM, record.POS, record.REF, record.ALT[0]))
+    for record in vcf.Reader(open(file_v, 'r')):
+        if record.samples[0]['GL'][1] > math.log10(1-epsilon):
+            all_SNVs.append(SNV_data(record.CHROM, record.POS, record.REF, record.ALT[0]))
+    
+    barcodes = []   # list of cell barcodes
+    for line in open(file_bc, 'r'):
+        barcodes.append(line.strip())
 
-    print("Starting data collection", datetime.datetime.now().time())
-    all_POS = SNV_data.get_all_SNV_pos(all_SNVs)
-    barcodes = get_all_barcodes(file_bc)
-
-    base_calls_mtx = build_base_calls_matrix(file_s, all_SNVs,
-                                             all_POS,barcodes)
+    base_calls_mtx = build_base_calls_matrix(file_s, all_SNVs, barcodes)
     base_calls_mtx[0].to_csv('{}'.format(out_csv_ref))
     base_calls_mtx[1].to_csv('{}'.format(out_csv_alt))
-    print("Base call matrix finished", datetime.datetime.now().time())
-
 
 if __name__ == "__main__":
     main()
