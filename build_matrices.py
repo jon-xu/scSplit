@@ -91,7 +91,7 @@ def main():
 
     all_SNVs = []  # list of SNV_data objects
     for record in vcf.Reader(open(file_v, 'r')):
-        if record.samples[0]['GL'][1] > math.log10(1-epsilon):
+        if record.samples[0]['GL'][1] > math.log10(1-epsilon):   # ignore SNVs with homozygous genotypes
             all_SNVs.append(SNV_data(record.CHROM, record.POS, record.REF, record.ALT[0]))
     
     barcodes = []   # list of cell barcodes
