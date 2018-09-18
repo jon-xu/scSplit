@@ -35,21 +35,20 @@ class models:
         self.all_POS = self.ref_bc_mtx.index.values.tolist()
         self.barcodes = self.ref_bc_mtx.columns.values.tolist()
         self.num = num + 1  # including an additional background state for doublets
-        self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
-                    index = self.barcodes, columns = list(range(self.num)))
-        self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
-                    index = self.barcodes, columns = list(range(self.num)))
+        self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
+        self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
         self.assigned = []
         for _ in range(self.num):
             self.assigned.append([])
-        self.model_MAF = pd.DataFrame(np.zeros((len(self.all_POS), self.num)),
-                    index=self.all_POS, columns=range(self.num))
+        self.model_MAF = pd.DataFrame(np.zeros((len(self.all_POS), self.num)), index=self.all_POS, columns=range(self.num))
         # set background alt count proportion as fixed minor allele frequency for each SNVs in the model
         self.model_MAF.loc[:, 0] = self.alt_bc_mtx.sum(axis=1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1))
         for n in range(1, self.num):
-            for index in self.all_POS:
-                self.model_MAF.loc[index, n] = np.random.beta((self.alt_bc_mtx.loc[index,:].sum()+1), (self.ref_bc_mtx.loc[index,:].sum()+1))
-
+#            for index in self.all_POS:
+#                self.model_MAF.loc[index, n] = np.random.beta((self.alt_bc_mtx.loc[index,:].sum()+1), (self.ref_bc_mtx.loc[index,:].sum()+1))
+            # use total ref count and alt count to generate probability simulation
+            beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), 1))
+            self.model_MAF.loc[:, n] = [1 - item[0] for item in beta_sim]   # P(A) = 1 - P(R)
 
     def calculate_model_MAF(self):
         """
@@ -114,17 +113,17 @@ def run_model(base_calls_mtx, num_models):
         model.calculate_cell_likelihood()
         print("cell origin probabilities ", model.P_s_c)
         model.calculate_model_MAF()
-        print("model_MAF_d: ", model.model_MAF)
+        print("model_maf_d: ", model.model_MAF)
         sum_log_likelihood.append(model.lP_c_s.sum().sum())
 
     model.assign_cells()
 
     # generate outputs
     for n in range(num_models+1):
-        with open('barcodes_MAF_d_{}.csv'.format(n), 'w') as myfile:
+        with open('barcodes_maf_d_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')    
-    model.P_s_c.to_csv('P_s_c_MAF_d.csv')
+    model.P_s_c.to_csv('P_s_c_maf_d.csv')
     print(sum_log_likelihood)
     print("Finished model at {}".format(datetime.datetime.now().time()))
 

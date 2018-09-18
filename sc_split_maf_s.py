@@ -77,7 +77,7 @@ class models:
         for i in range(self.num):
             denom = 0
             for j in range(self.num):
-                denom += 2 ** (self.lP_c_s.loc[:, j] + np.log2(P_s[j]) - self.lP_c_s.loc[:, i] - np.log2(P_s[i]))
+                denom += 2 ** (self.lP_c_s.loc[:, j] - self.lP_c_s.loc[:, i])
             self.P_s_c.loc[:, i] = 1 / denom
 
 
@@ -105,17 +105,17 @@ def run_model(base_calls_mtx, num_models):
         model.calculate_cell_likelihood()
         print("cell origin probabilities ", model.P_s_c)
         model.calculate_model_MAF()
-        print("model_MAF_s: ", model.model_MAF)
+        print("model_maf_s: ", model.model_MAF)
         sum_log_likelihood.append(model.lP_c_s.sum().sum())
 
     model.assign_cells()
 
     # generate outputs
     for n in range(num_models):
-        with open('barcodes_MAF_s_{}.csv'.format(n), 'w') as myfile:
+        with open('barcodes_maf_s_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
-    model.P_s_c.to_csv('P_s_c_MAF_s.csv')
+    model.P_s_c.to_csv('P_s_c_maf_s.csv')
     print(sum_log_likelihood)
     print("Finished model at {}".format(datetime.datetime.now().time()))
 

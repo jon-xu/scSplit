@@ -50,7 +50,6 @@ def build_base_calls_matrix(file_s, all_SNVs, barcodes):
 
     for snv in all_SNVs:
         position = str(snv.CHROM) + ':' + str(snv.POS)
-
         # use pysam.AlignedSegment.fetch to replace pysam.AlignedSegment.pileup which doesn't contain barcode information
         for read in in_sam.fetch(snv.CHROM, snv.POS-1, snv.POS+1):
             if read.flag < 256:   # only valid reads
