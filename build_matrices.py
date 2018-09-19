@@ -42,10 +42,8 @@ def build_base_calls_matrix(file_s, all_SNVs, barcodes):
             all_POS.append(pos)
 
     in_sam = ps.AlignmentFile(file_s, 'rb')
-    ref_base_calls_mtx = pd.DataFrame(np.zeros((len(all_POS), len(barcodes))),
-                                      index=all_POS, columns=barcodes)
-    alt_base_calls_mtx = pd.DataFrame(np.zeros((len(all_POS), len(barcodes))),
-                                      index=all_POS, columns=barcodes)
+    ref_base_calls_mtx = pd.DataFrame(np.zeros((len(all_POS), len(barcodes))), index=all_POS, columns=barcodes)
+    alt_base_calls_mtx = pd.DataFrame(np.zeros((len(all_POS), len(barcodes))), index=all_POS, columns=barcodes)
     print('Num Pos:', len(all_POS), ', Num barcodes:', len(barcodes))
 
     for snv in all_SNVs:
@@ -86,7 +84,7 @@ def main():
     all_SNVs = []  # list of SNV_data objects
     for record in vcf.Reader(open(file_v, 'r')):
         # only keep SNVs with heterozygous genotypes, and ignore SNV with multiple bases (e.g. GGGT/GGAT)
-        if record.samples[0]['GL'][1] > math.log10(1-epsilon) & len(record.REF) == 1 & len(record.ALT) == 1:
+        if (record.samples[0]['GL'][1] > math.log10(1-epsilon)) & (len(record.REF) == 1) & (len(record.ALT) == 1):
             all_SNVs.append(SNV_data(record.CHROM, record.POS, record.REF, record.ALT))
     
     barcodes = []   # list of cell barcodes
