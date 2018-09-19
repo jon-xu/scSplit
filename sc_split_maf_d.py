@@ -44,8 +44,6 @@ class models:
         # set background alt count proportion as fixed minor allele frequency for each SNVs in the model
         self.model_MAF.loc[:, 0] = self.alt_bc_mtx.sum(axis=1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1))
         for n in range(1, self.num):
-#            for index in self.all_POS:
-#                self.model_MAF.loc[index, n] = np.random.beta((self.alt_bc_mtx.loc[index,:].sum()+1), (self.ref_bc_mtx.loc[index,:].sum()+1))
             # use total ref count and alt count to generate probability simulation
             beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), 1))
             self.model_MAF.loc[:, n] = [1 - item[0] for item in beta_sim]   # P(A) = 1 - P(R)
@@ -111,9 +109,9 @@ def run_model(base_calls_mtx, num_models):
         iterations += 1
         print("Iteration {}".format(iterations))
         model.calculate_cell_likelihood()
-        print("cell origin probabilities ", model.P_s_c)
+        print("Cell origin probabilities ", model.P_s_c)
         model.calculate_model_MAF()
-        print("model_maf_d: ", model.model_MAF)
+        print("Model MAF: ", model.model_MAF)
         sum_log_likelihood.append(model.lP_c_s.sum().sum())
 
     model.assign_cells()

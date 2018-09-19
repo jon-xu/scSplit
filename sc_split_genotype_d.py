@@ -133,9 +133,9 @@ def run_model(base_calls_mtx, num_models):
         iterations += 1
         print("Iteration {}".format(iterations))
         model.calculate_cell_likelihood()
-        print("cell origin probabilities ", model.P_s_c)
+        print("Cell origin probabilities ", model.P_s_c)
         model.calculate_model_genotypes()
-        print("model_genotype_d: ", model.model_genotypes)
+        print("Model genotype: ", model.model_genotypes)
         sum_log_likelihood.append(model.lP_c_s.sum().sum())
 
     model.assign_cells()
