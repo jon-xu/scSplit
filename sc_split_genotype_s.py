@@ -37,10 +37,8 @@ class models:
         self.all_POS = self.ref_bc_mtx.index.values.tolist()
         self.barcodes = self.ref_bc_mtx.columns.values.tolist()
         self.num = num
-        self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
-                    index = self.barcodes, columns = list(range(self.num)))
-        self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)),
-                    index = self.barcodes, columns = list(range(self.num)))
+        self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
+        self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
         self.model_genotypes = []
         self.assigned = []
         for _ in range(self.num):
@@ -59,6 +57,7 @@ class models:
         self.p_d_ra = pd.DataFrame(binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), 0.5), index=self.all_POS, columns=self.barcodes)
         self.p_d_rr = pd.DataFrame(binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), err), index=self.all_POS, columns=self.barcodes)
 
+        # transform into posterior probability P(AA,RA,RR|D)
         self.p_aa_d = self.p_d_aa / (self.p_d_aa + self.p_d_ra + self.p_d_rr)
         self.p_ra_d = self.p_d_ra / (self.p_d_aa + self.p_d_ra + self.p_d_rr)
         self.p_rr_d = self.p_d_rr / (self.p_d_aa + self.p_d_ra + self.p_d_rr)
@@ -117,7 +116,8 @@ def run_model(base_calls_mtx, num_models):
     sum_log_likelihood = []
 
     # commencing E-M
-    while iterations < 6:
+    while iterations < 15:
+
         iterations += 1
         print("Iteration {}".format(iterations))
         model.calculate_cell_likelihood()

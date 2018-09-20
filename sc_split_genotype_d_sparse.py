@@ -10,6 +10,7 @@ import math
 import numpy as np
 import pandas as pd
 from scipy.stats import binom
+from scipy.sparse import csr_matrix
 import datetime
 import csv
 
@@ -34,8 +35,8 @@ class models:
 
         self.ref_bc_mtx = base_calls_mtx[0]
         self.alt_bc_mtx = base_calls_mtx[1]
-        self.all_POS = self.ref_bc_mtx.index.values.tolist()
-        self.barcodes = self.ref_bc_mtx.columns.values.tolist()
+        self.all_POS = base_calls_mtx[2].tolist()
+        self.barcodes = base_calls_mtx[3].tolist()
         self.num = num + 1  # including an additional background state for doublets
         self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
         self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
@@ -57,9 +58,9 @@ class models:
         err = 0.01  # error rate assumption
 
         # binomial probability for P(D|AA,RA,RR) with the alt count vs total count condition and (err, 0.5, 1-err) genotype probability
-        self.p_d_aa = pd.DataFrame(binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), 1-err), index=self.all_POS, columns=self.barcodes)
-        self.p_d_ra = pd.DataFrame(binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), 0.5), index=self.all_POS, columns=self.barcodes)
-        self.p_d_rr = pd.DataFrame(binom.pmf(self.alt_bc_mtx, (self.alt_bc_mtx + self.ref_bc_mtx), err), index=self.all_POS, columns=self.barcodes)
+        self.p_d_aa = csr_matrix(binom.pmf(pd.DataFrame(self.alt_bc_mtx.todense()), pd.DataFrame((self.alt_bc_mtx + self.ref_bc_mtx).todense()), 1-err))
+        self.p_d_ra = csr_matrix(binom.pmf(pd.DataFrame(self.alt_bc_mtx.todense()), pd.DataFrame((self.alt_bc_mtx + self.ref_bc_mtx).todense()), 0.5))
+        self.p_d_rr = csr_matrix(binom.pmf(pd.DataFrame(self.alt_bc_mtx.todense()), pd.DataFrame((self.alt_bc_mtx + self.ref_bc_mtx).todense()), err))
 
         # transform into posterior probability P(AA,RA,RR|D)
         self.p_aa_d = self.p_d_aa / (self.p_d_aa + self.p_d_ra + self.p_d_rr)
@@ -74,9 +75,9 @@ class models:
         """
 
         for n in range(self.num):
-            self.model_genotypes[n].loc[:, 'AA'] = self.p_aa_d.dot(self.P_s_c[n]) / (self.p_aa_d.dot(self.P_s_c[n]) + self.p_ra_d.dot(self.P_s_c[n]) + self.p_rr_d.dot(self.P_s_c[n]))
-            self.model_genotypes[n].loc[:, 'RA'] = self.p_ra_d.dot(self.P_s_c[n]) / (self.p_aa_d.dot(self.P_s_c[n]) + self.p_ra_d.dot(self.P_s_c[n]) + self.p_rr_d.dot(self.P_s_c[n]))
-            self.model_genotypes[n].loc[:, 'RR'] = self.p_rr_d.dot(self.P_s_c[n]) / (self.p_aa_d.dot(self.P_s_c[n]) + self.p_ra_d.dot(self.P_s_c[n]) + self.p_rr_d.dot(self.P_s_c[n]))
+            self.model_genotypes[n].loc[:, 'AA'] = pd.DataFrame(self.p_aa_d.dot(self.P_s_c[n]) / (self.p_aa_d.dot(self.P_s_c[n]) + self.p_ra_d.dot(self.P_s_c[n]) + self.p_rr_d.dot(self.P_s_c[n]))).values[0]
+            self.model_genotypes[n].loc[:, 'RA'] = pd.DataFrame(self.p_ra_d.dot(self.P_s_c[n]) / (self.p_aa_d.dot(self.P_s_c[n]) + self.p_ra_d.dot(self.P_s_c[n]) + self.p_rr_d.dot(self.P_s_c[n]))).values[0]
+            self.model_genotypes[n].loc[:, 'RR'] = pd.DataFrame(self.p_rr_d.dot(self.P_s_c[n]) / (self.p_aa_d.dot(self.P_s_c[n]) + self.p_ra_d.dot(self.P_s_c[n]) + self.p_rr_d.dot(self.P_s_c[n]))).values[0]
         self.model_genotypes[0] = pd.DataFrame(np.tile([0.25,0.5,0.25],[len(self.all_POS),1]),index=self.all_POS, columns=['RR','RA','AA'])   # reset the background genotype
 
     def calculate_cell_likelihood(self):
@@ -91,10 +92,10 @@ class models:
         P_s = []
 
         for n in range(self.num):
-            matcalc = self.p_d_rr.multiply(self.model_genotypes[n].loc[:,'RR'], axis=0) + \
-                      self.p_d_ra.multiply(self.model_genotypes[n].loc[:,'RA'], axis=0) + \
-                      self.p_d_aa.multiply(self.model_genotypes[n].loc[:,'AA'], axis=0)            
-            self.lP_c_s.loc[:, n] = matcalc.apply(np.log2).sum(axis=0)  # log likelihood to avoid python computation limit of 2^+/-308
+            matcalc = self.p_d_rr.T.multiply(self.model_genotypes[n].loc[:,'RR']).T + \
+                      self.p_d_ra.T.multiply(self.model_genotypes[n].loc[:,'RA']).T + \
+                      self.p_d_aa.T.multiply(self.model_genotypes[n].loc[:,'AA']).T           
+            self.lP_c_s.loc[:, n] = pd.DataFrame(np.log2(matcalc.data).reshape(len(self.all_POS),len(self.barcodes))).sum(axis=0).values  # log likelihood to avoid python computation limit of 2^+/-308
             if n == 0:
                 P_s.append(0.02)  # probability of doublet ratio
             else:
@@ -140,10 +141,10 @@ def run_model(base_calls_mtx, num_models):
 
     # generate outputs
     for n in range(num_models+1):
-        with open('barcodes_genotype_d_{}.csv'.format(n), 'w') as myfile:
+        with open('barcodes_genotype_d_sparse_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')    
-    model.P_s_c.to_csv('P_s_c_genotype_d.csv')
+    model.P_s_c.to_csv('P_s_c_genotype_d_sparse.csv')
     print(sum_log_likelihood)
     print("Finished model at {}".format(datetime.datetime.now().time()))
 
@@ -152,11 +153,11 @@ def read_base_calls_matrix(ref_csv, alt_csv):
 
     """ Read in an existing matrix from a csv file"""
     
-    base_calls_mtx = []
-    print('reading in reference matrix')
-    base_calls_mtx.append(pd.read_csv(ref_csv, header=0, index_col=0))
-    print('reading in alternate matrix')
-    base_calls_mtx.append(pd.read_csv(alt_csv, header=0, index_col=0))
+    ref = pd.read_csv(ref_csv, header=0, index_col=0)
+    alt = pd.read_csv(alt_csv, header=0, index_col=0)
+    ref_s = csr_matrix(ref.values)
+    alt_s = csr_matrix(alt.values)
+    base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
     print("Base call matrix finished", datetime.datetime.now().time())
     return base_calls_mtx
 

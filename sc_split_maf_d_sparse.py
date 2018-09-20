@@ -10,6 +10,7 @@ import math
 import numpy as np
 import pandas as pd
 from scipy.stats import binom
+from scipy.sparse import csr_matrix
 import datetime
 import csv
 
@@ -32,8 +33,8 @@ class models:
 
         self.ref_bc_mtx = base_calls_mtx[0]
         self.alt_bc_mtx = base_calls_mtx[1]
-        self.all_POS = self.ref_bc_mtx.index.values.tolist()
-        self.barcodes = self.ref_bc_mtx.columns.values.tolist()
+        self.all_POS = base_calls_mtx[2].tolist()
+        self.barcodes = base_calls_mtx[3].tolist()
         self.num = num + 1  # including an additional background state for doublets
         self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
         self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
@@ -45,7 +46,7 @@ class models:
         self.model_MAF.loc[:, 0] = self.alt_bc_mtx.sum(axis=1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1))
         for n in range(1, self.num):
             # use total ref count and alt count to generate probability simulation
-            beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), 1))
+            beta_sim = np.random.beta(self.ref_bc_mtx.sum(), self.alt_bc_mtx.sum(), size = (len(self.all_POS), 1))
             self.model_MAF.loc[:, n] = [1 - item[0] for item in beta_sim]   # P(A) = 1 - P(R)
 
     def calculate_model_MAF(self):
@@ -54,7 +55,7 @@ class models:
 
         """
 
-        self.model_MAF = (self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2)
+        self.model_MAF = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2))
         self.model_MAF.loc[:, 0] = self.model_MAF.loc[:, 1:(self.num-1)].mean(axis=1)   # reset the background MAF
 
 
@@ -70,9 +71,9 @@ class models:
         P_s = []
 
         for n in range(self.num):
-            matcalc = self.alt_bc_mtx.multiply(self.model_MAF.loc[:, n].apply(np.log2), axis=0) \
-                    + self.ref_bc_mtx.multiply((1 - self.model_MAF.loc[:, n]).apply(np.log2), axis=0)
-            self.lP_c_s.loc[:, n] = matcalc.sum(axis=0)  # log likelihood to avoid python computation limit of 2^+/-308
+            matcalc = self.alt_bc_mtx.T.multiply(self.model_MAF.loc[:, n].apply(np.log2)).T \
+                    + self.ref_bc_mtx.T.multiply((1 - self.model_MAF.loc[:, n]).apply(np.log2)).T
+            self.lP_c_s.loc[:, n] = matcalc.sum(axis=0).tolist()[0]  # log likelihood to avoid python computation limit of 2^+/-308
             if n == 0:
                 P_s.append(0.02)  # probability of doublet ratio
             else:
@@ -118,10 +119,10 @@ def run_model(base_calls_mtx, num_models):
 
     # generate outputs
     for n in range(num_models+1):
-        with open('barcodes_maf_d_{}.csv'.format(n), 'w') as myfile:
+        with open('barcodes_maf_d_sparse_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')    
-    model.P_s_c.to_csv('P_s_c_maf_d.csv')
+    model.P_s_c.to_csv('P_s_c_maf_d_sparse.csv')
     print(sum_log_likelihood)
     print("Finished model at {}".format(datetime.datetime.now().time()))
 
@@ -130,11 +131,11 @@ def read_base_calls_matrix(ref_csv, alt_csv):
 
     """ Read in existing matrix from the csv files """
 
-    base_calls_mtx = []
-    print('reading in reference matrix')
-    base_calls_mtx.append(pd.read_csv(ref_csv, header=0, index_col=0))
-    print('reading in alternate matrix')
-    base_calls_mtx.append(pd.read_csv(alt_csv, header=0, index_col=0))
+    ref = pd.read_csv(ref_csv, header=0, index_col=0)
+    alt = pd.read_csv(alt_csv, header=0, index_col=0)
+    ref_s = csr_matrix(ref.values)
+    alt_s = csr_matrix(alt.values)
+    base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
     print("Base call matrix finished", datetime.datetime.now().time())
     return base_calls_mtx
 

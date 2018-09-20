@@ -39,13 +39,13 @@ class models:
         self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
         self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
         self.assigned = []
+        self.model_MAF = pd.DataFrame(np.zeros((len(self.all_POS), self.num)), index=self.all_POS, columns=range(self.num))
         for _ in range(self.num):
             self.assigned.append([])
-        self.model_MAF = pd.DataFrame(np.zeros((len(self.all_POS), self.num)), index=self.all_POS, columns=range(self.num))
 
         for n in range(self.num):
             # use total ref count and alt count to generate probability simulation
-            beta_sim = np.random.beta(self.ref_bc_mtx.sum().sum(), self.alt_bc_mtx.sum().sum(), size = (len(self.all_POS), 1))
+            beta_sim = np.random.beta(self.ref_bc_mtx.sum(), self.alt_bc_mtx.sum(), size = (len(self.all_POS), 1))
             self.model_MAF.loc[:, n] = [1 - item[0] for item in beta_sim]   # P(A) = 1 - P(R)
 
 
@@ -55,7 +55,7 @@ class models:
 
         """
 
-        self.model_MAF = (self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2)
+        self.model_MAF = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2))
 
 
     def calculate_cell_likelihood(self):
@@ -70,7 +70,7 @@ class models:
         for n in range(self.num):
             matcalc = self.alt_bc_mtx.T.multiply(self.model_MAF.loc[:, n].apply(np.log2)).T \
                     + self.ref_bc_mtx.T.multiply((1 - self.model_MAF.loc[:, n]).apply(np.log2)).T
-            self.lP_c_s.loc[:, n] = matcalc.sum(axis=0)  # log likelihood to avoid python computation limit of 2^+/-308
+            self.lP_c_s.loc[:, n] = matcalc.sum(axis=0).tolist()[0]  # log likelihood to avoid python computation limit of 2^+/-308
 
         # log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
         for i in range(self.num):
@@ -99,6 +99,7 @@ def run_model(base_calls_mtx, num_models):
 
     # commencing E-M
     while iterations < 15:
+
         iterations += 1
         print("Iteration {}".format(iterations))
         model.calculate_cell_likelihood()
@@ -123,12 +124,11 @@ def read_base_calls_matrix(ref_csv, alt_csv):
 
     """ Read in existing matrix from the csv files """
 
-    base_calls_mtx = []
     ref = pd.read_csv(ref_csv, header=0, index_col=0)
     alt = pd.read_csv(alt_csv, header=0, index_col=0)
-    ref_s = csr_matrix(ref.values).toarray()
-    alt_s = csr_matrix(alt.values).toarray()
-    base_calls_mtx.append(ref_s, alt_s, ref.index, ref.columns)
+    ref_s = csr_matrix(ref.values)
+    alt_s = csr_matrix(alt.values)
+    base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
     print("Base call matrix finished", datetime.datetime.now().time())
     return base_calls_mtx
 
