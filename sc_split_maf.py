@@ -36,8 +36,8 @@ class models:
         self.all_POS = base_calls_mtx[2].tolist()
         self.barcodes = base_calls_mtx[3].tolist()
         self.num = num + 1  # including an additional background state for doublets
-        self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
-        self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = list(range(self.num)))
+        self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = range(self.num))
+        self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = range(self.num))
         self.assigned = []
         for _ in range(self.num):
             self.assigned.append([])
@@ -55,7 +55,8 @@ class models:
 
         """
 
-        self.model_MAF = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2))
+        self.model_MAF = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2),
+                                        index = self.all_POS, columns = range(self.num))
         self.model_MAF.loc[:, 0] = self.model_MAF.loc[:, 1:(self.num-1)].mean(axis=1)   # reset the background MAF
 
 
@@ -119,10 +120,11 @@ def run_model(base_calls_mtx, num_models):
 
     # generate outputs
     for n in range(num_models+1):
-        with open('barcodes_maf_d_sparse_{}.csv'.format(n), 'w') as myfile:
+        with open('barcodes_maf_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')    
-    model.P_s_c.to_csv('P_s_c_maf_d_sparse.csv')
+    model.P_s_c.to_csv('P_s_c_maf.csv')
+    model.model_MAF.to_csv('model_MAF.csv')
     print(sum_log_likelihood)
     print("Finished model at {}".format(datetime.datetime.now().time()))
 
