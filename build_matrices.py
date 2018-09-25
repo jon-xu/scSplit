@@ -58,7 +58,7 @@ def build_base_calls_matrix(file_s, all_SNVs, barcodes):
                         barcode = read.get_tag('CB')
                     except:
                         barcode = ''
-                    if barcode is not '':
+                    if barcode in barcodes:
                         # read the base from the snv.POS which the read has mapped to
                         base = read.query_sequence[[item for item in read.get_aligned_pairs(True) if item[1] == (snv.POS - 1)][0][0]]
                         if base == snv.REF:
@@ -76,7 +76,7 @@ def main():
     # Input and outputs
     file_v = "mixed.vcf"
     file_s = "mixed.bam"
-    file_bc = "bc_sorted.txt"   # known and checked barcodes
+    file_bc = "barcodes.tsv"   # known and checked barcodes
     out_csv_ref = 'ref_filtered.csv'
     out_csv_alt = 'alt_filtered.csv'
     
