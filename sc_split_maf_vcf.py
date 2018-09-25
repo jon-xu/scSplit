@@ -150,9 +150,6 @@ def run_model(base_calls_mtx, num_models):
                 myfile.write(str(item) + '\n')
     model.P_s_c.to_csv('P_s_c_maf.csv')
     model.model_MAF.to_csv('model_MAF.csv')
-    model.model_genotypes[0].to_csv('model_genotypes_AA.csv')  # Likelihood of AA in all models
-    model.model_genotypes[1].to_csv('model_genotypes_RA.csv')  # Likelihood of RA in all models
-    model.model_genotypes[2].to_csv('model_genotypes_RR.csv')  # Likelihood of RR in all models
     generate_vcf(model)
     print(sum_log_likelihood)
     print("Finished model at {}".format(datetime.datetime.now().time()))
@@ -202,7 +199,7 @@ def generate_vcf(model):
     for n in range(1, num):
         vcf_content.loc[:, n] = RR.loc[:, n] + ',' + RA.loc[:, n] + ',' + AA.loc[:, n]
 
-    with open('sc_split.vcf') as myfile:
+    with open('sc_split.vcf', 'w+') as myfile:
         myfile.write('##fileformat=VCFv4.2\n')
         myfile.write('##fileDate=')
         myfile.write(str(datetime.datetime.today()).split(' ')[0])
