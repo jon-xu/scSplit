@@ -138,7 +138,7 @@ def run_model(base_calls_mtx, num_models):
         print("Iteration {}".format(iterations))
         model.calculate_cell_likelihood()  # E-step, calculate the expected cell origin likelihood with a function of model.model_MAF (theta)
         model.calculate_model_MAF()  # M-step, to optimise unknown model parameter model.model_MAF (theta)
-        sum_log_likelihood.append((2**model.lP_c_s).sum(axis=1).apply(np.log2).sum())
+        sum_log_likelihood.append((2**model.lP_c_s).sum(axis=1).apply(np.log2).sum())  # L = Sum_c{log(Sum_s(P(c|s))}
 
     model.assign_cells()
     model.calculate_model_genotypes()
