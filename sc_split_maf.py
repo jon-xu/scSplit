@@ -43,8 +43,8 @@ class models:
         for _ in range(self.num):
             self.assigned.append([])
         self.model_MAF = pd.DataFrame(np.zeros((len(self.all_POS), self.num)), index=self.all_POS, columns=range(self.num))
-        # set background alt count proportion as fixed minor allele frequency for each SNVs in the model
-        self.model_MAF.loc[:, 0] = self.alt_bc_mtx.sum(axis=1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1))
+        # set background alt count proportion as fixed minor allele frequency for each SNVs in the model, pseudo count is added for 0 counts on multi-base SNPs
+        self.model_MAF.loc[:, 0] = (self.alt_bc_mtx.sum(axis=1) + 1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1) + 2)
         for n in range(1, self.num):
             # use total ref count and alt count to generate probability simulation
             beta_sim = np.random.beta(self.ref_bc_mtx.sum(), self.alt_bc_mtx.sum(), size = (len(self.all_POS), 1))
@@ -76,7 +76,7 @@ class models:
         for n in range(self.num):
             matcalc = self.alt_bc_mtx.T.multiply(self.model_MAF.loc[:, n].apply(np.log2)).T \
                     + self.ref_bc_mtx.T.multiply((1 - self.model_MAF.loc[:, n]).apply(np.log2)).T
-            self.lP_c_s.loc[:, n] = matcalc.sum(axis=0).tolist()[0]  # log likelihood to avoid python computation limit of 2^+/-308
+            self.lP_c_s.loc[:, n] = matcalc.sum(axis=0).tolist()[0]  # log likelihood to avoid python computation limit of 1e-323/1e+308
             if n == 0:
                 P_s.append(0.02)  # probability of doublet ratio
             else:
@@ -116,9 +116,9 @@ def run_model(base_calls_mtx, num_models):
             myfile.write(progress)
         model.calculate_cell_likelihood()  # E-step, calculate the expected cell origin likelihood with a function of model.model_MAF (theta)
         model.calculate_model_MAF()  # M-step, to optimise unknown model parameter model.model_MAF (theta)
-        # sum_log_likelihood.append((2**model.lP_c_s).sum(axis=1).apply(np.log2).sum())  # L = Sum_c{log(Sum_s(P(c|s))}
         # approximation due to python calculation limit
         sum_log_likelihood.append(model.lP_c_s.max(axis=1).sum())  # L = Sum_c{log(Sum_s(P(c|s))}
+        # sum_log_likelihood.append(((2**model.lP_c_s).sum(axis=1)+1e-323).apply(np.log2).sum())  # L = Sum_c{log(Sum_s(P(c|s))}
 
     model.assign_cells()
 
