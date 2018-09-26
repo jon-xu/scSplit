@@ -73,7 +73,7 @@ def build_base_calls_matrix(file_s, all_SNVs, barcodes):
 
 def main():
 
-    # Input and outputs
+    # Input and output files
     file_v = "mixed.vcf"
     file_s = "mixed.bam"
     file_bc = "barcodes.tsv"   # known and checked barcodes

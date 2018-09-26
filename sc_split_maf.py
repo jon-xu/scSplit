@@ -38,6 +38,7 @@ class models:
         self.num = num + 1  # including an additional background state for doublets
         self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = range(self.num))
         self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = range(self.num))
+        self.A_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = range(self.num))
         self.assigned = []
         for _ in range(self.num):
             self.assigned.append([])
@@ -48,6 +49,7 @@ class models:
             # use total ref count and alt count to generate probability simulation
             beta_sim = np.random.beta(self.ref_bc_mtx.sum(), self.alt_bc_mtx.sum(), size = (len(self.all_POS), 1))
             self.model_MAF.loc[:, n] = [1 - item[0] for item in beta_sim]   # P(A) = 1 - P(R)
+
 
     def calculate_model_MAF(self):
         """
@@ -98,6 +100,7 @@ class models:
             self.assigned[n] = sorted(self.P_s_c.loc[self.P_s_c[n] >= 0.9].index.values.tolist())
 
 
+
 def run_model(base_calls_mtx, num_models):
 
     model = models(base_calls_mtx, num_models)
@@ -106,25 +109,26 @@ def run_model(base_calls_mtx, num_models):
     sum_log_likelihood = []
 
     # commencing E-M
-    while iterations < 15:
-
+    while iterations < 10:
         iterations += 1
-        print("Iteration {}".format(iterations))
-        model.calculate_cell_likelihood()
-        print("Cell origin probabilities ", model.P_s_c)
-        model.calculate_model_MAF()
-        print("Model MAF: ", model.model_MAF)
-        sum_log_likelihood.append(model.lP_c_s.sum().sum())
+        progress = 'Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
+        with open('wip.log', 'a') as myfile:
+            myfile.write(progress)
+        model.calculate_cell_likelihood()  # E-step, calculate the expected cell origin likelihood with a function of model.model_MAF (theta)
+        model.calculate_model_MAF()  # M-step, to optimise unknown model parameter model.model_MAF (theta)
+        # sum_log_likelihood.append((2**model.lP_c_s).sum(axis=1).apply(np.log2).sum())  # L = Sum_c{log(Sum_s(P(c|s))}
+        # approximation due to python calculation limit
+        sum_log_likelihood.append(model.lP_c_s.max(axis=1).sum())  # L = Sum_c{log(Sum_s(P(c|s))}
 
     model.assign_cells()
 
     # generate outputs
     for n in range(num_models+1):
-        with open('barcodes_maf_{}.csv'.format(n), 'w') as myfile:
+        with open('barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
-                myfile.write(str(item) + '\n')    
-    model.P_s_c.to_csv('P_s_c_maf.csv')
-    model.model_MAF.to_csv('model_MAF.csv')
+                myfile.write(str(item) + '\n')
+    model.P_s_c.to_csv('P_s_c.csv')
+    model.model_MAF.to_csv('model_maf.csv')
     print(sum_log_likelihood)
     print("Finished model at {}".format(datetime.datetime.now().time()))
 
@@ -133,8 +137,8 @@ def read_base_calls_matrix(ref_csv, alt_csv):
 
     """ Read in existing matrix from the csv files """
 
-    ref = pd.read_csv(ref_csv, header=0, index_col=0)
-    alt = pd.read_csv(alt_csv, header=0, index_col=0)
+    ref = pd.read_csv(ref_csv, header=0, index_col=0)  # read ref matrix with header line and column
+    alt = pd.read_csv(alt_csv, header=0, index_col=0)  # read ref matrix with header line and column
     ref_s = csr_matrix(ref.values)
     alt_s = csr_matrix(alt.values)
     base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
@@ -146,7 +150,7 @@ def main():
 
     num_models = 2          # number of models in each run
 
-    # Mixed donor files
+    # input and output files
     ref_csv = 'ref_filtered.csv'  # reference matrix
     alt_csv = 'alt_filtered.csv'  # alternative matrix
 
@@ -158,4 +162,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
