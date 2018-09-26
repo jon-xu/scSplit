@@ -1,2 +1,2 @@
 # sc_demultiplexing
-Split mixed single cell RNA samples by identifying the allele frequency/genotype similarity between each cell and sample models, using machine learning approach
+Genotype-free demultiplexing of pooled single-cell RNAseq, using a machine learning approach
