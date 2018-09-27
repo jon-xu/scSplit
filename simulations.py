@@ -3,11 +3,10 @@ Simulate SNV/Barcode Matrices (ref/alt) for genotype-free demultiplexing on pool
 
 import sys
 import vcf  # https://pyvcf.readthedocs.io/en/latest/INTRO.html
-import math
+import random
 import numpy as np
 import pysam as ps  # http://pysam.readthedocs.io/en/latest/api.html#sam-bam-files
 import pandas as pd
-from random import randint
 import datetime
 
 class SNV_data:
@@ -36,7 +35,7 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
     num = len(all_SNVs[0].SAMPLES)
 
     # randomly put all barcodes into the groups
-    groups = [randint(0, num-1) for item in range(len(barcodes))]
+    groups = [random.randint(0, num-1) for item in range(len(barcodes))]
 
     all_POS = []   # snv positions (1-based positions from vcf file)
     for entry in all_SNVs:
@@ -60,28 +59,34 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
                     # if the read aligned positions cover the SNV position
                     try:
                         barcode = read.get_tag('CB')
+                        # get sample id from randomly generated grouping indexes for the list of barcodes
                         sample = groups[barcodes.index(barcode)]
-                        if np.argmax(snv.SAMPLES[sample]['GL']) == 0:
-                            ref_base_calls_mtx.loc[position, barcode] += 1
-                            new = snv.REF
-                        elif np.argmax(snv.SAMPLES[sample]['GL']) == 2:
+                        # calculate probability of A allele based on the genotype likelihoods (10 ^ GL)
+                        P_A = 0.5 * 10 ** snv.SAMPLES[sample]['GL'][1] + 10 ** snv.SAMPLES[sample]['GL'][2]
+                        # toss a biased coin using P_A to get A/R allele for the simulated read
+                        if random.random() < P_A:
                             alt_base_calls_mtx.loc[position, barcode] += 1
                             new = snv.ALT
                         else:
-                            coin = randint(0,1)
-                            if coin == 0:
-                                ref_base_calls_mtx.loc[position, barcode] += 1
-                                new = snv.REF
-                            else:
-                                alt_base_calls_mtx.loc[position, barcode] += 1
-                                new = snv.ALT
+                            ref_base_calls_mtx.loc[position, barcode] += 1
+                            new = snv.REF
 
                         # update the base in bam file
-                        read.query_sequence[[item for item in read.get_aligned_pairs(True) if item[1] == (snv.POS - 1)][0][0]] = new
+                        for item in read.get_aligned_pairs(True):
+                            if item[1] == (snv.POS - 1):
+                                read.query_sequence = read.query_sequence[:item[0]] + new + read.query_sequence[(item[0]+1):]
                         out_sam.write(read)
 
                     except:
                         pass
+                
+                else:
+                    out_sam.write(read)  # write the read to out_sam without changes if SNV position is not a reference position
+            
+            else:
+                out_sam.write(read)  # write the read to out_sam without changes if its flag >= 256
+
+        # reads not overlapping with SNV position is filtered out
 
     ref_base_calls_mtx.index.name = alt_base_calls_mtx.index.name = 'SNV'
 

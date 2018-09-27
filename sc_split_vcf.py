@@ -29,23 +29,24 @@ def main():
     barcodes = ref.columns
 
     err = 0.01  # error rate assumption
-    # binomial probability for P(D|AA,RA,RR) with the alt count vs total count condition and (err, 0.5, 1-err) genotype probability
+    # binomial simulation for genotype likelihood P(D|AA,RA,RR) with the alt count vs total count condition and (err, 0.5, 1-err) as allele probability
     p_d_aa = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.todense()), pd.DataFrame((alt_s + ref_s).todense()), 1-err), index = all_POS, columns = barcodes)
     p_d_ra = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.todense()), pd.DataFrame((alt_s + ref_s).todense()), 0.5), index = all_POS, columns = barcodes)
     p_d_rr = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.todense()), pd.DataFrame((alt_s + ref_s).todense()), err), index = all_POS, columns = barcodes)
 
-    # transform into posterior probability P(AA,RA,RR|D)
+    # transform into posterior genotype probability P(AA,RA,RR|D)
     p_aa_d = p_d_aa / (p_d_aa + p_d_ra + p_d_rr)
     p_ra_d = p_d_ra / (p_d_aa + p_d_ra + p_d_rr)
     p_rr_d = p_d_rr / (p_d_aa + p_d_ra + p_d_rr)
-    
-    P_s_c = pd.read_csv(psc_csv, header=0, index_col=0)
-    A_s_c = (P_s_c >= 0.9) * 1
 
-    model_genotypes = []  # genotypes likelihood for RR/RA/AA
-    model_genotypes.append(p_aa_d.dot(A_s_c) / (p_aa_d.dot(A_s_c) + p_ra_d.dot(A_s_c) + p_rr_d.dot(A_s_c) + 1))
-    model_genotypes.append(p_ra_d.dot(A_s_c) / (p_aa_d.dot(A_s_c) + p_ra_d.dot(A_s_c) + p_rr_d.dot(A_s_c) + 1))
-    model_genotypes.append(p_rr_d.dot(A_s_c) / (p_aa_d.dot(A_s_c) + p_ra_d.dot(A_s_c) + p_rr_d.dot(A_s_c) + 1))
+    # get cell assignment    
+    P_s_c = pd.read_csv(psc_csv, header=0, index_col=0)
+    A_s_c = ((P_s_c >= 0.9) * 1).astype('float64')
+
+    model_genotypes = []  # for genotypes likelihood P(D|RR/RA/AA)
+    model_genotypes.append((p_aa_d.dot(A_s_c) + 1e-308).apply(np.log10) - (p_aa_d.dot(A_s_c) + p_ra_d.dot(A_s_c) + p_rr_d.dot(A_s_c) + 1e-308).apply(np.log10))
+    model_genotypes.append((p_ra_d.dot(A_s_c) + 1e-308).apply(np.log10) - (p_aa_d.dot(A_s_c) + p_ra_d.dot(A_s_c) + p_rr_d.dot(A_s_c) + 1e-308).apply(np.log10))
+    model_genotypes.append((p_rr_d.dot(A_s_c) + 1e-308).apply(np.log10) - (p_aa_d.dot(A_s_c) + p_ra_d.dot(A_s_c) + p_rr_d.dot(A_s_c) + 1e-308).apply(np.log10))
 
     num = len(P_s_c.columns)
     vcf_content = pd.DataFrame(index = all_POS, columns = range(-9, num))
@@ -70,6 +71,7 @@ def main():
     vcf_content.loc[:,'INFO'] = '.'
     vcf_content.loc[:,'FORMAT'] = 'GL'
 
+    # round to three decimal points
     AA = round(model_genotypes[0].astype(float) + 0.0005, 3).astype(str)
     RA = round(model_genotypes[1].astype(float) + 0.0005, 3).astype(str)
     RR = round(model_genotypes[2].astype(float) + 0.0005, 3).astype(str)
