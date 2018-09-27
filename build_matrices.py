@@ -1,5 +1,5 @@
 """
-Build SNV/Barcode Matrices (ref/alt) for genotype demultiplexing on pooled scRNA-seq
+Build SNV/Barcode Matrices (ref/alt) for genotype-free demultiplexing on pooled scRNA-seq
 Jon Xu
 Lachlan Coin
 Aug 2018
