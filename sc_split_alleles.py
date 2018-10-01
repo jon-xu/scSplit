@@ -4,7 +4,7 @@ Jon Xu
 Lachlan Coin
 Aug 2018
 jun.xu@uq.edu.au
-"""test
+"""
 
 import sys
 import vcf  # https://pyvcf.readthedocs.io/en/latest/INTRO.html
