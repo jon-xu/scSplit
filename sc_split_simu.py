@@ -32,10 +32,15 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
         barcodes(list): cell barcodes
     """
 
-    num = len(all_SNVs[0].SAMPLES)
+    num = 2  # user input
 
     # randomly put all barcodes into the groups
     groups = [random.randint(0, num-1) for item in range(len(barcodes))]
+
+    # output randomly assigned cell groups
+    with open('bc_groups.txt', 'w+') as myfile:
+        for n in range(len(barcodes)):
+            myfile.write(barcodes[n] + '\t' + str(groups[n]) + '\n')
 
     all_POS = []   # snv positions (1-based positions from vcf file)
     for entry in all_SNVs:
@@ -61,12 +66,19 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
                         barcode = read.get_tag('CB')
                         # get sample id from randomly generated grouping indexes for the list of barcodes
                         sample = groups[barcodes.index(barcode)]
-                        # calculate probability of A allele based on the genotype likelihoods (10 ^ GL)
-                        P_A = 0.5 * 10 ** snv.SAMPLES[sample]['GL'][1] + 10 ** snv.SAMPLES[sample]['GL'][2]
+                        # calculate probability of A allele based on the genotype probability (GP) or likelihoods (10 ^ GL)
+                        try:
+                            rr = 10 ** snv.SAMPLES[sample]['GL'][0]
+                            ra = 10 ** snv.SAMPLES[sample]['GL'][1]
+                            aa = 10 ** snv.SAMPLES[sample]['GL'][2]
+                            # transform P(D|G) to P(G|D) and P(A) = 0.5 P(RA) + P(AA)
+                            P_A = (ra/2 + aa) / (rr + ra + aa)
+                        except:
+                            P_A = 0.5 * snv.SAMPLES[sample]['GP'][1] + snv.SAMPLES[sample]['GP'][2]
                         # toss a biased coin using P_A to get A/R allele for the simulated read
                         if random.random() < P_A:
                             alt_base_calls_mtx.loc[position, barcode] += 1
-                            new = snv.ALT
+                            new = str(snv.ALT[0])
                         else:
                             ref_base_calls_mtx.loc[position, barcode] += 1
                             new = snv.REF
@@ -75,6 +87,16 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
                         for item in read.get_aligned_pairs(True):
                             if item[1] == (snv.POS - 1):
                                 read.query_sequence = read.query_sequence[:item[0]] + new + read.query_sequence[(item[0]+1):]
+                        out_sam.write(read)
+
+                        # simulate doublets
+                        if random.random() < 0.01:  # assume 1% doublets
+                            rdm = random.choice(barcodes)
+                            if new == snv.REF:
+                                ref_base_calls_mtx.loc[position, rdm] += 1
+                            else:
+                                alt_base_calls_mtx.loc[position, rdm] += 1
+                            read.set_tag('CB', rdm)
                         out_sam.write(read)
 
                     except:

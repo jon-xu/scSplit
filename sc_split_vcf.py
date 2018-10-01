@@ -28,27 +28,20 @@ def main():
     all_POS = ref.index
     barcodes = ref.columns
 
-    err = 0.01  # error rate assumption
-    # binomial simulation for genotype likelihood P(D|AA,RA,RR) with the alt count vs total count condition and (err, 0.5, 1-err) as allele probability
-    p_d_aa = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.todense()), pd.DataFrame((alt_s + ref_s).todense()), 1-err), index = all_POS, columns = barcodes)
-    p_d_ra = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.todense()), pd.DataFrame((alt_s + ref_s).todense()), 0.5), index = all_POS, columns = barcodes)
-    p_d_rr = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.todense()), pd.DataFrame((alt_s + ref_s).todense()), err), index = all_POS, columns = barcodes)
-
-    # transform into posterior genotype probability P(AA,RA,RR|D)
-    p_aa_d = p_d_aa / (p_d_aa + p_d_ra + p_d_rr)
-    p_ra_d = p_d_ra / (p_d_aa + p_d_ra + p_d_rr)
-    p_rr_d = p_d_rr / (p_d_aa + p_d_ra + p_d_rr)
-
-    # get cell assignment    
+    # get cell assignment
     P_s_c = pd.read_csv(psc_csv, header=0, index_col=0)
     A_s_c = ((P_s_c >= 0.9) * 1).astype('float64')
-
-    model_genotypes = []  # for genotypes likelihood P(D|RR/RA/AA)
-    model_genotypes.append((p_aa_d.dot(A_s_c) + 1e-308).apply(np.log10) - (p_aa_d.dot(A_s_c) + p_ra_d.dot(A_s_c) + p_rr_d.dot(A_s_c) + 1e-308).apply(np.log10))
-    model_genotypes.append((p_ra_d.dot(A_s_c) + 1e-308).apply(np.log10) - (p_aa_d.dot(A_s_c) + p_ra_d.dot(A_s_c) + p_rr_d.dot(A_s_c) + 1e-308).apply(np.log10))
-    model_genotypes.append((p_rr_d.dot(A_s_c) + 1e-308).apply(np.log10) - (p_aa_d.dot(A_s_c) + p_ra_d.dot(A_s_c) + p_rr_d.dot(A_s_c) + 1e-308).apply(np.log10))
-
     num = len(P_s_c.columns)
+
+    err = 0.01  # error rate assumption
+    # binomial simulation for genotype likelihood P(D|AA,RA,RR) with the alt count vs total count condition and (err, 0.5, 1-err) as allele probability
+
+    p_d_aa = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 1-err), index = all_POS, columns = range(num)).apply(np.log10)
+    p_d_ra = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 0.5), index = all_POS, columns = range(num)).apply(np.log10)
+    p_d_rr = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), err), index = all_POS, columns = range(num)).apply(np.log10)
+
+    model_genotypes = [p_d_aa, p_d_ra, p_d_rr]  # for genotypes likelihood P(D|RR/RA/AA)
+
     vcf_content = pd.DataFrame(index = all_POS, columns = range(-9, num))
     names = vcf_content.columns.tolist()
     names[0] = '#CHROM'
@@ -77,7 +70,7 @@ def main():
     RR = round(model_genotypes[2].astype(float) + 0.0005, 3).astype(str)
 
     for n in range(0, num):
-        vcf_content.loc[:, n] = RR.loc[:, str(n)] + ',' + RA.loc[:, str(n)] + ',' + AA.loc[:, str(n)]
+        vcf_content.loc[:, n] = RR.loc[:, n] + ',' + RA.loc[:, n] + ',' + AA.loc[:, n]
 
     header = '##fileformat=VCFv4.2\n##fileDate=' + str(datetime.datetime.today()).split(' ')[0] + \
              '\n##source=sc_split\n##reference=hg19.fa\n##contig=<ID=1,length=249250621>\n' + \
