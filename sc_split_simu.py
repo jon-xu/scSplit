@@ -118,10 +118,10 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
 def main():
 
     # Input and output files
-    file_v = 'sim.vcf'
+    file_v = 'input.vcf'
     file_i = 'input.bam'
     file_o = 'sim.bam'
-    file_bc = 'sim.tsv'
+    file_bc = 'sim.txt'
     out_csv_ref = 'ref_sim.csv'
     out_csv_alt = 'alt_sim.csv'
     
