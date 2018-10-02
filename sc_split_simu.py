@@ -122,9 +122,9 @@ def main():
 
     # Input and output files
     file_v = 'input.vcf'
+    file_b = 'input.txt'
     file_i = 'input.bam'
     file_o = 'sim.bam'
-    file_bc = 'sim.txt'
     out_csv_ref = 'ref_sim.csv'
     out_csv_alt = 'alt_sim.csv'
     
@@ -135,7 +135,7 @@ def main():
             all_SNVs.append(SNV_data(record.CHROM, record.POS, record.REF, record.ALT, record.samples))
     
     barcodes = []   # list of cell barcodes
-    for line in open(file_bc, 'r'):
+    for line in open(file_b, 'r'):
         barcodes.append(line.strip())
 
     base_calls_mtx = simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes)
