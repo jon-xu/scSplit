@@ -64,8 +64,10 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
                     # if the read aligned positions cover the SNV position
                     try:
                         barcode = read.get_tag('CB')
+
                         # get sample id from randomly generated grouping indexes for the list of barcodes
                         sample = groups[barcodes.index(barcode)]
+
                         # calculate probability of A allele based on the genotype probability (GP) or likelihoods (10 ^ GL)
                         try:
                             rr = 10 ** snv.SAMPLES[sample]['GL'][0]
@@ -75,6 +77,7 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
                             P_A = (ra/2 + aa) / (rr + ra + aa)
                         except:
                             P_A = 0.5 * snv.SAMPLES[sample]['GP'][1] + snv.SAMPLES[sample]['GP'][2]
+
                         # toss a biased coin using P_A to get A/R allele for the simulated read
                         if random.random() < P_A:
                             alt_base_calls_mtx.loc[position, barcode] += 1
@@ -83,14 +86,14 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
                             ref_base_calls_mtx.loc[position, barcode] += 1
                             new = snv.REF
 
-                        # update the base in bam file
+                        # update the new base to bam file
                         for item in read.get_aligned_pairs(True):
                             if item[1] == (snv.POS - 1):
                                 read.query_sequence = read.query_sequence[:item[0]] + new + read.query_sequence[(item[0]+1):]
                         out_sam.write(read)
 
                         # simulate doublets
-                        if random.random() < 0.01:  # assume 1% doublets
+                        if random.random() < 0.02:  # allow 2% doublets
                             rdm = random.choice(barcodes)
                             if new == snv.REF:
                                 ref_base_calls_mtx.loc[position, rdm] += 1
