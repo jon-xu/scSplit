@@ -81,7 +81,7 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
                         # toss a biased coin using P_A to get A/R allele for the simulated read
                         if random.random() < P_A:
                             alt_base_calls_mtx.loc[position, barcode] += 1
-                            new = str(snv.ALT[0])
+                            new = str(snv.ALT[0])  # ALT returned as list by pysam
                         else:
                             ref_base_calls_mtx.loc[position, barcode] += 1
                             new = snv.REF
@@ -93,14 +93,19 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
                         out_sam.write(read)
 
                         # simulate doublets
-                        if random.random() < 0.02:  # allow 2% doublets
-                            rdm = random.choice(barcodes)
-                            if new == snv.REF:
-                                ref_base_calls_mtx.loc[position, rdm] += 1
+                        if barcodes.index(barcode) < len(barcodes) * 0.02:  # assume 2% doublets
+                            sample = (groups[barcodes.index(barcode)] + 1 ) % num
+                            P_A = 0.5 * snv.SAMPLES[sample]['GP'][1] + snv.SAMPLES[sample]['GP'][2]
+                            if random.random() < P_A:
+                                alt_base_calls_mtx.loc[position, barcode] += 1
+                                new = str(snv.ALT[0])
                             else:
-                                alt_base_calls_mtx.loc[position, rdm] += 1
-                            read.set_tag('CB', rdm)
-                        out_sam.write(read)
+                                ref_base_calls_mtx.loc[position, barcode] += 1
+                                new = snv.REF
+                            for item in read.get_aligned_pairs(True):
+                                if item[1] == (snv.POS - 1):
+                                    read.query_sequence = read.query_sequence[:item[0]] + new + read.query_sequence[(item[0]+1):]
+                            out_sam.write(read)
 
                     except:
                         pass

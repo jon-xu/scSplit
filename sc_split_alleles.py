@@ -76,7 +76,7 @@ def main():
     # Input and output files
     file_v = "mixed.vcf"
     file_s = "mixed.bam"
-    file_bc = "barcodes.tsv"   # known and checked barcodes
+    file_b = "barcodes.tsv"   # known and checked barcodes
     out_csv_ref = 'ref_filtered.csv'
     out_csv_alt = 'alt_filtered.csv'
     
@@ -89,7 +89,7 @@ def main():
             all_SNVs.append(SNV_data(record.CHROM, record.POS, record.REF, record.ALT))
     
     barcodes = []   # list of cell barcodes
-    for line in open(file_bc, 'r'):
+    for line in open(file_b, 'r'):
         barcodes.append(line.strip())
 
     base_calls_mtx = build_base_calls_matrix(file_s, all_SNVs, barcodes)
