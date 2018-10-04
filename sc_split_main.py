@@ -107,7 +107,7 @@ def run_model(base_calls_mtx, num_models):
     sum_log_likelihood = [1,2]
 
     # commencing E-M
-    while iterations < 30:
+    while sum_log_likelihood[-2] != sum_log_likelihood[-1]:
         iterations += 1
         progress = 'Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
         with open('wip.log', 'a') as myfile: myfile.write(progress)
