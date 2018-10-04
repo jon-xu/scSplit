@@ -73,8 +73,9 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
                             rr = 10 ** snv.SAMPLES[sample]['GL'][0]
                             ra = 10 ** snv.SAMPLES[sample]['GL'][1]
                             aa = 10 ** snv.SAMPLES[sample]['GL'][2]
-                            # transform P(D|G) to P(G|D) and P(A) = 0.5 P(RA) + P(AA)
+                            # transform P(D|G) to P(G|D)
                             P_A = (ra/2 + aa) / (rr + ra + aa)
+                            # P(A) = 0.5 P(RA) + P(AA)
                         except:
                             P_A = 0.5 * snv.SAMPLES[sample]['GP'][1] + snv.SAMPLES[sample]['GP'][2]
 
@@ -89,7 +90,7 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
                         # update the new base to bam file
                         for item in read.get_aligned_pairs(True):
                             if item[1] == (snv.POS - 1):
-                                read.query_sequence = read.query_sequence[:item[0]] + new + read.query_sequence[(item[0]+1):]
+                                read.query_sequence = read.query_sequence[:item[0]] + new + read.query_sequence[(item[0] + 1):]
                         out_sam.write(read)
 
                         # simulate doublets
@@ -104,7 +105,7 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
                                 new = snv.REF
                             for item in read.get_aligned_pairs(True):
                                 if item[1] == (snv.POS - 1):
-                                    read.query_sequence = read.query_sequence[:item[0]] + new + read.query_sequence[(item[0]+1):]
+                                    read.query_sequence = read.query_sequence[:item[0]] + new + read.query_sequence[(item[0] + 1):]
                             out_sam.write(read)
 
                     except:
