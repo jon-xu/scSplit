@@ -17,7 +17,7 @@ import csv
 class models:
     def __init__(self, base_calls_mtx, num=2):
         """
-        A complete model class containing SNVs, matrices counts, barcodes, model minor allele frequency with assigned cells 
+        A complete model class containing SNVs, matrices counts, barcodes, model allele fraction with assigned cells 
 
         Parameters:
              base_calls_mtx(list of Dataframes): SNV-barcode matrix containing lists of base calls
@@ -27,7 +27,7 @@ class models:
              P_s_c(DataFrame): barcode/sample matrix containing the probability of seeing sample s with observation of barcode c
              lP_c_s(DataFrame): barcode/sample matrix containing the log likelihood of seeing barcode c under sample s, whose sum should increase by each iteration
              assigned(list): final lists of cell/barcode assigned to each cluster/model
-             model_af(list): list of num model minor allele frequencies based on P(A)
+             model_af(list): list of num model allele frequencies based on P(A)
 
         """
 
@@ -38,21 +38,20 @@ class models:
         self.num = num + 1  # including an additional background state for doublets
         self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = range(self.num))
         self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = range(self.num))
-        self.A_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = range(self.num))
         self.assigned = []
         for _ in range(self.num):
             self.assigned.append([])
         self.model_af = pd.DataFrame(np.zeros((len(self.all_POS), self.num)), index=self.all_POS, columns=range(self.num))
-        # set background alt count proportion as fixed minor allele frequency for each SNVs in the model, pseudo count is added for 0 counts on multi-base SNPs
+        # set background alt count proportion as fixed allele fraction for each SNVs in the model, pseudo count is added for 0 counts on multi-base SNPs
         self.model_af.loc[:, 0] = (self.alt_bc_mtx.sum(axis=1) + 1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1) + 2)
         for n in range(1, self.num):
-            # use total ref count and alt count on each position to generate probability simulation using beta distribution
+            # use total ref count and alt count on each position to generate probability simulation using beta distribution, sum() as summary of whole csr_matrix
             self.model_af.loc[:, n] = [item[0] for item in np.random.beta(self.alt_bc_mtx.sum(), self.ref_bc_mtx.sum(), size = (len(self.all_POS), 1))]
 
 
     def calculate_model_af(self):
         """
-        Update the model minor allele frequency by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
+        Update the model allele fraction by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
 
         """
 
@@ -108,16 +107,15 @@ def run_model(base_calls_mtx, num_models):
     sum_log_likelihood = [1,2]
 
     # commencing E-M
-    while sum_log_likelihood[-1] != sum_log_likelihood[-2]:
+    while iterations < 30:
         iterations += 1
         progress = 'Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
-        with open('wip.log', 'a') as myfile:
-            myfile.write(progress)
+        with open('wip.log', 'a') as myfile: myfile.write(progress)
         model.calculate_cell_likelihood()  # E-step, calculate the expected cell origin likelihood with a function of model.model_af (theta)
         model.calculate_model_af()  # M-step, to optimise unknown model parameter model.model_af (theta)
         # approximation due to python calculation limit
-        sum_log_likelihood.append(model.lP_c_s.max(axis=1).sum())  # L = Sum_c{log(Sum_s(P(c|s))}
-        # sum_log_likelihood.append(((2**model.lP_c_s).sum(axis=1)+1e-323).apply(np.log2).sum())  # L = Sum_c{log(Sum_s(P(c|s))}
+        sum_log_likelihood.append(model.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], thus LL = Sum_c{log[Sum_s(P(c|s))]}
+        # sum_log_likelihood.append(((2**model.lP_c_s).sum(axis=1)+1e-323).apply(np.log2).sum())
 
     model.assign_cells()
 
@@ -129,7 +127,8 @@ def run_model(base_calls_mtx, num_models):
     model.P_s_c.to_csv('P_s_c.csv')
     model.model_af.to_csv('model_af.csv')
     print(sum_log_likelihood)
-    print("Finished model at {}".format(datetime.datetime.now().time()))
+    progress = 'scSplit finished at: ' + str(datetime.datetime.now()) + '\n'
+    with open('wip.log', 'a') as myfile: myfile.write(progress)
 
 
 def read_base_calls_matrix(ref_csv, alt_csv):
@@ -137,11 +136,12 @@ def read_base_calls_matrix(ref_csv, alt_csv):
     """ Read in existing matrix from the csv files """
 
     ref = pd.read_csv(ref_csv, header=0, index_col=0)  # read ref matrix with header line and column
-    alt = pd.read_csv(alt_csv, header=0, index_col=0)  # read ref matrix with header line and column
+    alt = pd.read_csv(alt_csv, header=0, index_col=0)  # read alt matrix with header line and column
     ref_s = csr_matrix(ref.values)
     alt_s = csr_matrix(alt.values)
     base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
-    print("Base call matrix finished", datetime.datetime.now().time())
+    progress = "AF matrices uploaded: " + str(datetime.datetime.now()) + '\n'
+    with open('wip.log', 'a') as myfile: myfile.write(progress)
     return base_calls_mtx
 
 
@@ -153,7 +153,8 @@ def main():
     ref_csv = 'ref_filtered.csv'  # reference matrix
     alt_csv = 'alt_filtered.csv'  # alternative matrix
 
-    print ("Starting data collection", datetime.datetime.now().time())
+    progress = "Starting data collection: " + str(datetime.datetime.now()) + '\n'
+    with open('wip.log', 'a') as myfile: myfile.write(progress)
     
     base_calls_mtx = read_base_calls_matrix(ref_csv, alt_csv)
 
