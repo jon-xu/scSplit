@@ -45,8 +45,8 @@ class models:
         # set background alt count proportion as fixed allele fraction for each SNVs in the model, pseudo count is added for 0 counts on multi-base SNPs
         self.model_af.loc[:, 0] = (self.alt_bc_mtx.sum(axis=1) + 1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1) + 2)
         for n in range(1, self.num):
-            # use total ref count and alt count on each position to generate probability simulation using beta distribution, sum() as summary of whole csr_matrix
-            self.model_af.loc[:, n] = [item[0] for item in np.random.beta(self.alt_bc_mtx.sum(), self.ref_bc_mtx.sum(), size = (len(self.all_POS), 1))]
+            # use total ref count and alt count on each position of csr_matrix to generate probability simulation using beta distribution
+            self.model_af.loc[:, n] = [item[0] for item in np.random.beta(self.alt_bc_mtx.sum(axis=1)+1, self.ref_bc_mtx.sum(axis=1)+1)]
 
 
     def calculate_model_af(self):
