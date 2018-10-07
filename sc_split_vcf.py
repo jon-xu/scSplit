@@ -64,16 +64,20 @@ def main():
     vcf_content.loc[:,'FORMAT'] = 'GP:GL'
 
     # round to three decimal points
-    GP_AA = round(model_genotypes[0].astype(float) / (model_genotypes[0].astype(float) + model_genotypes[0].astype(float))+ 0.0005, 3).astype(str)
-    GP_RA = round(model_genotypes[1].astype(float) / (model_genotypes[1].astype(float) + model_genotypes[1].astype(float))+ 0.0005, 3).astype(str)
-    GP_RR = round(model_genotypes[2].astype(float) / (model_genotypes[2].astype(float) + model_genotypes[2].astype(float))+ 0.0005, 3).astype(str)
-    GL_AA = round(model_genotypes[0].astype(float) + 0.0005, 3).astype(str)
-    GL_RA = round(model_genotypes[1].astype(float) + 0.0005, 3).astype(str)
-    GL_RR = round(model_genotypes[2].astype(float) + 0.0005, 3).astype(str)
+    GL_RR = 10 ** model_genotypes[0].astype(float)
+    GL_RA = 10 ** model_genotypes[1].astype(float)
+    GL_AA = 10 ** model_genotypes[2].astype(float)
+    GL_nom = GL_RR + GL_RA + GL_AA
+    GP_RR = truncate(GL_RR / GL_nom, 3).astype(str)
+    GP_RA = truncate(GL_RA / GL_nom, 3).astype(str)
+    GP_AA = truncate(GL_AA / GL_nom, 3).astype(str)
+    lGL_RR = round(model_genotypes[0].astype(float) + 0.0005, 3).astype(str)
+    lGL_RA = round(model_genotypes[1].astype(float) + 0.0005, 3).astype(str)
+    lGL_AA = round(model_genotypes[2].astype(float) + 0.0005, 3).astype(str)
 
     for n in range(0, num):
         vcf_content.loc[:, n] = GP_RR.loc[:, n] + ',' + GP_RA.loc[:, n] + ',' + GP_AA.loc[:, n] + \
-                          ':' + GL_RR.loc[:, n] + ',' + GL_RA.loc[:, n] + ',' + GL_AA.loc[:, n]
+                          ':' + lGL_RR.loc[:, n] + ',' + lGL_RA.loc[:, n] + ',' + lGL_AA.loc[:, n]
 
     header = '##fileformat=VCFv4.2\n##fileDate=' + str(datetime.datetime.today()).split(' ')[0] + \
              '\n##source=sc_split\n##reference=hg19.fa\n##contig=<ID=1,length=249250621>\n' + \
