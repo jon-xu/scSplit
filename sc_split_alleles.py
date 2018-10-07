@@ -86,7 +86,7 @@ def main():
     for record in vcf.Reader(open(file_v, 'r')):
         # only keep SNVs with heterozygous genotypes, and ignore SNV with multiple bases (e.g. GGGT/GGAT)
         if (record.samples[0]['GL'][1] > math.log10(1-epsilon)) & (len(record.REF) == 1) & (len(record.ALT) == 1):
-            all_SNVs.append(SNV_data(record.CHROM, record.POS, record.REF, record.ALT))
+            all_SNVs.append(SNV_data(record.CHROM, record.POS, record.REF, record.ALT[0]))
     
     barcodes = []   # list of cell barcodes
     for line in open(file_b, 'r'):
