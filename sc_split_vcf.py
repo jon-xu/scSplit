@@ -26,7 +26,6 @@ def main():
     ref_s = csr_matrix(ref.values)
     alt_s = csr_matrix(alt.values)
     all_POS = ref.index
-    barcodes = ref.columns
 
     # get cell assignment
     P_s_c = pd.read_csv(psc_csv, header=0, index_col=0)
