@@ -34,9 +34,9 @@ def main():
 
     err = 0.01  # error rate assumption
     # binomial simulation for genotype likelihood P(D|AA,RA,RR) with the alt count vs total count condition and (err, 0.5, 1-err) as allele probability
-    lp_d_aa = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 1-err), index = all_POS, columns = range(num)).apply(np.log10)
-    lp_d_ra = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 0.5), index = all_POS, columns = range(num)).apply(np.log10)
     lp_d_rr = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), err), index = all_POS, columns = range(num)).apply(np.log10)
+    lp_d_ra = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 0.5), index = all_POS, columns = range(num)).apply(np.log10)
+    lp_d_aa = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 1-err), index = all_POS, columns = range(num)).apply(np.log10)
 
     vcf_content = pd.DataFrame(index = all_POS, columns = range(-9, num))  # -9~-1: meta data, 0: doublet state, 1:num: samples
     names = vcf_content.columns.tolist()
