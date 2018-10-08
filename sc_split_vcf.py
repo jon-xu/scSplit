@@ -35,11 +35,9 @@ def main():
     err = 0.01  # error rate assumption
     # binomial simulation for genotype likelihood P(D|AA,RA,RR) with the alt count vs total count condition and (err, 0.5, 1-err) as allele probability
 
-    p_d_aa = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 1-err), index = all_POS, columns = range(num)).apply(np.log10)
-    p_d_ra = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 0.5), index = all_POS, columns = range(num)).apply(np.log10)
-    p_d_rr = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), err), index = all_POS, columns = range(num)).apply(np.log10)
-
-    model_genotypes = [p_d_aa, p_d_ra, p_d_rr]  # for genotypes likelihood P(D|RR/RA/AA)
+    lp_d_aa = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 1-err), index = all_POS, columns = range(num)).apply(np.log10)
+    lp_d_ra = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 0.5), index = all_POS, columns = range(num)).apply(np.log10)
+    lp_d_rr = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), err), index = all_POS, columns = range(num)).apply(np.log10)
 
     vcf_content = pd.DataFrame(index = all_POS, columns = range(-9, num))
     names = vcf_content.columns.tolist()
@@ -64,16 +62,16 @@ def main():
     vcf_content.loc[:,'FORMAT'] = 'GP:GL'
 
     # round to three decimal points
-    GL_RR = 10 ** model_genotypes[0].astype(float)
-    GL_RA = 10 ** model_genotypes[1].astype(float)
-    GL_AA = 10 ** model_genotypes[2].astype(float)
+    GL_RR = 10 ** lp_d_rr.astype(float)
+    GL_RA = 10 ** lp_d_ra.astype(float)
+    GL_AA = 10 ** lp_d_aa.astype(float)
     GL_nom = GL_RR + GL_RA + GL_AA
-    GP_RR = truncate(GL_RR / GL_nom, 3).astype(str)
-    GP_RA = truncate(GL_RA / GL_nom, 3).astype(str)
-    GP_AA = truncate(GL_AA / GL_nom, 3).astype(str)
-    lGL_RR = round(model_genotypes[0].astype(float) + 0.0005, 3).astype(str)
-    lGL_RA = round(model_genotypes[1].astype(float) + 0.0005, 3).astype(str)
-    lGL_AA = round(model_genotypes[2].astype(float) + 0.0005, 3).astype(str)
+    GP_RR = round(GL_RR / GL_nom, 3).astype(str)
+    GP_RA = round(GL_RA / GL_nom, 3).astype(str)
+    GP_AA = round(GL_AA / GL_nom, 3).astype(str)
+    lGL_RR = round(lp_d_rr.astype(float), 3).astype(str)
+    lGL_RA = round(lp_d_ra.astype(float), 3).astype(str)
+    lGL_AA = round(lp_d_aa.astype(float), 3).astype(str)
 
     for n in range(0, num):
         vcf_content.loc[:, n] = GP_RR.loc[:, n] + ',' + GP_RA.loc[:, n] + ',' + GP_AA.loc[:, n] + \
