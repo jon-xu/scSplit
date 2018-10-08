@@ -39,7 +39,7 @@ def main():
     lp_d_ra = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 0.5), index = all_POS, columns = range(num)).apply(np.log10)
     lp_d_rr = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), err), index = all_POS, columns = range(num)).apply(np.log10)
 
-    vcf_content = pd.DataFrame(index = all_POS, columns = range(-9, num))
+    vcf_content = pd.DataFrame(index = all_POS, columns = range(-9, num))  # -9~-1: meta data, 0: doublet state, 1:num: samples
     names = vcf_content.columns.tolist()
     names[0] = '#CHROM'
     names[1] = 'POS'
@@ -73,7 +73,7 @@ def main():
     lGL_RA = round(lp_d_ra.astype(float), 3).astype(str)
     lGL_AA = round(lp_d_aa.astype(float), 3).astype(str)
 
-    for n in range(0, num):
+    for n in range(num):
         vcf_content.loc[:, n] = GP_RR.loc[:, n] + ',' + GP_RA.loc[:, n] + ',' + GP_AA.loc[:, n] + \
                           ':' + lGL_RR.loc[:, n] + ',' + lGL_RA.loc[:, n] + ',' + lGL_AA.loc[:, n]
 
