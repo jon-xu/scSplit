@@ -46,8 +46,8 @@ class models:
         self.model_af.loc[:, 0] = (self.alt_bc_mtx.sum(axis=1) + 1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1) + 2)
         for n in range(1, self.num):
             # use total ref count and alt count on each position of csr_matrix to generate probability simulation using beta distribution
-            N_A = self.alt_bc_mtx.sum(axis=1)+1
-            N_R = self.ref_bc_mtx.sum(axis=1)+1
+            N_A = self.alt_bc_mtx.sum(axis=1) + 1
+            N_R = self.ref_bc_mtx.sum(axis=1) + 1
             N_T = N_A + N_R
             self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100*N_A/N_T, 100*N_R/N_T)]
 
