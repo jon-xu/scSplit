@@ -5,7 +5,6 @@ Lachlan Coin
 Aug 2018
 """
 
-import sys
 import vcf  # https://pyvcf.readthedocs.io/en/latest/INTRO.html
 import numpy as np
 import pandas as pd

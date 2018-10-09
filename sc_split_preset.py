@@ -5,6 +5,8 @@ Lachlan Coin
 Aug 2018
 """
 
+import sys
+import vcf  # https://pyvcf.readthedocs.io/en/latest/INTRO.html
 import numpy as np
 import pandas as pd
 from scipy.stats import binom
@@ -43,11 +45,13 @@ class models:
         # set background alt count proportion as fixed allele fraction for each SNVs in the model, pseudo count is added for 0 counts on multi-base SNPs
         self.model_af.loc[:, 0] = (self.alt_bc_mtx.sum(axis=1) + 1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1) + 2)
         for n in range(1, self.num):
-            # use total ref count and alt count on each position of csr_matrix to generate probability simulation using beta distribution
-            N_A = self.alt_bc_mtx.sum(axis=1) + 1
-            N_R = self.ref_bc_mtx.sum(axis=1) + 1
-            N_T = N_A + N_R
-            self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100*N_A/N_T, 100*N_R/N_T)]
+            PAs = []
+            in_vcf = vcf.Reader(open('input4.vcf', 'r'))
+            for record in in_vcf:
+                if (record.CHROM+':'+str(record.POS)) in self.ref_bc_mtx.indices:
+                    PA = 0.5 * record.samples[n-1]['GP'][1] + record.samples[n-1]['GP'][2]
+                    PAs.append(PA)
+            self.model_af.loc[:, n] = PAs
 
 
     def calculate_model_af(self):

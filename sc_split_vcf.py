@@ -5,7 +5,6 @@ Lachlan Coin
 Aug 2018
 """
 
-import sys
 import numpy as np
 import pandas as pd
 from scipy.stats import binom
