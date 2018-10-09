@@ -1,5 +1,9 @@
 """
-Simulate SNV/Barcode Matrices (ref/alt) for genotype-free demultiplexing on pooled scRNA-seq Jon Xu Lachlan Coin Aug 2018 jun.xu@uq.edu.au """
+Simulate SNV/Barcode Matrices (ref/alt) for genotype-free demultiplexing on pooled scRNA-seq Jon Xu Lachlan Coin Aug 2018 jun.xu@uq.edu.au 
+Jon Xu (jun.xu@uq.edu.au)
+Lachlan Coin
+Aug 2018
+"""
 
 import sys
 import vcf  # https://pyvcf.readthedocs.io/en/latest/INTRO.html
@@ -148,5 +152,5 @@ def main():
     base_calls_mtx[0].to_csv('{}'.format(out_csv_ref))
     base_calls_mtx[1].to_csv('{}'.format(out_csv_alt))
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

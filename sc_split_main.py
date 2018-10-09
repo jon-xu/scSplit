@@ -143,7 +143,7 @@ def read_base_calls_matrix(ref_csv, alt_csv):
     ref_s = csr_matrix(ref.values)
     alt_s = csr_matrix(alt.values)
     base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
-    progress = "AF matrices uploaded: " + str(datetime.datetime.now()) + '\n'
+    progress = 'AF matrices uploaded: ' + str(datetime.datetime.now()) + '\n'
     with open('wip.log', 'a') as myfile: myfile.write(progress)
     return base_calls_mtx
 
@@ -156,14 +156,14 @@ def main():
     ref_csv = 'ref_filtered.csv'  # reference matrix
     alt_csv = 'alt_filtered.csv'  # alternative matrix
 
-    progress = "Starting data collection: " + str(datetime.datetime.now()) + '\n'
+    progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
     with open('wip.log', 'a') as myfile: myfile.write(progress)
     
     base_calls_mtx = read_base_calls_matrix(ref_csv, alt_csv)
 
     run_model(base_calls_mtx, num_models)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
 
 

@@ -95,7 +95,7 @@ def main():
         myfile.write(header)
         vcf_content.to_csv(myfile, index=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='"')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
 
 

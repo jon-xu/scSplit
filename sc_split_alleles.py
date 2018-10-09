@@ -74,9 +74,9 @@ def build_base_calls_matrix(file_s, all_SNVs, barcodes):
 def main():
 
     # Input and output files
-    file_v = "mixed.vcf"
-    file_s = "mixed.bam"
-    file_b = "barcodes.tsv"   # known and checked barcodes
+    file_v = 'mixed.vcf'
+    file_s = 'mixed.bam'
+    file_b = 'barcodes.tsv'   # known and checked barcodes
     out_csv_ref = 'ref_filtered.csv'
     out_csv_alt = 'alt_filtered.csv'
     
@@ -96,5 +96,5 @@ def main():
     base_calls_mtx[0].to_csv('{}'.format(out_csv_ref))
     base_calls_mtx[1].to_csv('{}'.format(out_csv_alt))
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
