@@ -41,7 +41,7 @@ class models:
         self.assigned = []
         for _ in range(self.num):
             self.assigned.append([])
-        self.model_af = pd.DataFrame(np.zeros((len(self.all_POS), self.num)), index=self.all_POS, columns=range(self.num))
+        self.model_af = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         # set background alt count proportion as fixed allele fraction for each SNVs in the model, pseudo count is added for 0 counts on multi-base SNPs
         self.model_af.loc[:, 0] = (self.alt_bc_mtx.sum(axis=1) + 1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1) + 2)
         for n in range(1, self.num):
@@ -57,8 +57,13 @@ class models:
         Update the model allele fraction by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
 
         """
-
-        self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + 1) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 2),
+        N_ref = self.ref_bc_mtx.sum(axis=1)
+        N_alt = self.alt_bc_mtx.sum(axis=1)
+        N_ref[N_ref == 0] = 1
+        N_alt[N_alt == 0] = 1
+        k_ref = N_ref / (N_ref + N_alt)
+        k_alt = N_alt / (N_ref + N_alt)
+        self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + k_ref + k_alt),
                                         index = self.all_POS, columns = range(self.num))
         self.model_af.loc[:, 0] = self.model_af.loc[:, 1:(self.num-1)].mean(axis=1)   # reset the background AF
 
