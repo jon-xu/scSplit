@@ -55,8 +55,8 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
     in_sam = ps.AlignmentFile(file_i, 'rb')
     out_sam = ps.AlignmentFile(file_o, 'wb', template=in_sam)
 
-    ref_base_calls_mtx = pd.DataFrame(np.zeros((len(all_POS), len(barcodes))), index=all_POS, columns=barcodes)
-    alt_base_calls_mtx = pd.DataFrame(np.zeros((len(all_POS), len(barcodes))), index=all_POS, columns=barcodes)
+    ref_base_calls_mtx = pd.DataFrame(0, index=all_POS, columns=barcodes)
+    alt_base_calls_mtx = pd.DataFrame(0, index=all_POS, columns=barcodes)
     print('Num Pos:', len(all_POS), ', Num barcodes:', len(barcodes))
 
     for snv in all_SNVs:

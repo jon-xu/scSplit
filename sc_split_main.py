@@ -36,8 +36,8 @@ class models:
         self.all_POS = base_calls_mtx[2].tolist()
         self.barcodes = base_calls_mtx[3].tolist()
         self.num = num + 1  # including an additional background state for doublets
-        self.P_s_c = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = range(self.num))
-        self.lP_c_s = pd.DataFrame(np.zeros((len(self.barcodes), self.num)), index = self.barcodes, columns = range(self.num))
+        self.P_s_c = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
+        self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.assigned = []
         for _ in range(self.num):
             self.assigned.append([])
