@@ -46,11 +46,13 @@ class models:
         self.model_af.loc[:, 0] = (self.alt_bc_mtx.sum(axis=1) + 1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1) + 2)
         for n in range(1, self.num):
             PAs = []
+            last = ''
             in_vcf = vcf.Reader(open('input4.vcf', 'r'))
-            for record in in_vcf:
-                if (record.CHROM+':'+str(record.POS)) in self.all_POS:   # only need those SNVs captured in our matrices
+            for record in in_vcf: 
+                if (record.ID != last) & (record.ID in self.all_POS):   # only need those SNVs captured in our matrices
                     PA = 0.5 * record.samples[n-1]['GP'][1] + record.samples[n-1]['GP'][2]
                     PAs.append(PA)
+                    last = record.ID
             self.model_af.loc[:, n] = PAs
 
 

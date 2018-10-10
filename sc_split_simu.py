@@ -48,7 +48,7 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
     all_POS = []   # snv positions (1-based positions from vcf file)
     for entry in all_SNVs:
         pos = str(entry.CHROM) + ':' + str(entry.POS)
-        if pos not in all_POS:
+        if pos not in all_POS:  # keep unique positions only (multiallelic sites affected)
             all_POS.append(pos)
 
     in_sam = ps.AlignmentFile(file_i, 'rb')
