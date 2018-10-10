@@ -48,7 +48,7 @@ class models:
             PAs = []
             in_vcf = vcf.Reader(open('input4.vcf', 'r'))
             for record in in_vcf:
-                if (record.CHROM+':'+str(record.POS)) in self.ref_bc_mtx.indices:
+                if (record.CHROM+':'+str(record.POS)) in self.ref_bc_mtx.indices:   # only need those SNVs captured in our matrices
                     PA = 0.5 * record.samples[n-1]['GP'][1] + record.samples[n-1]['GP'][2]
                     PAs.append(PA)
             self.model_af.loc[:, n] = PAs
@@ -123,6 +123,7 @@ def run_model(base_calls_mtx, num_models):
         with open('wip.log', 'a') as myfile: myfile.write(progress)
         model.calculate_cell_likelihood()  # E-step, calculate the expected cell origin likelihood with a function of model.model_af (theta)
         model.calculate_model_af()  # M-step, to optimise unknown model parameter model.model_af (theta)
+        model.model_af.to_csv('model_af_' + str(iteration))
         # approximation due to python calculation limit
         sum_log_likelihood.append(model.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], thus LL = Sum_c{log[Sum_s(P(c|s))]}
         # sum_log_likelihood.append(((2**model.lP_c_s).sum(axis=1)+1e-323).apply(np.log2).sum())
