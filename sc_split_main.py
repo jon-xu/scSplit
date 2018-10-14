@@ -49,8 +49,7 @@ class models:
             N_A = self.alt_bc_mtx.sum(axis=1) + 1
             N_R = self.ref_bc_mtx.sum(axis=1) + 1
             N_T = N_A + N_R
-            self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100*N_A/N_T, 100*N_R/N_T)]
-            
+            self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100*N_A/N_T, 100*N_R/N_T)]            
             self.P_s.append((1 - dbl) / (self.num - 1))  # even initial distribution of P(s) across all other singlet samples
 
     def calculate_model_af(self):
@@ -58,10 +57,11 @@ class models:
         Update the model allele fraction by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
 
         """
+        pseudo_count = 0.01  # pseudo count for zero entries
         N_ref = self.ref_bc_mtx.sum(axis=1)
         N_alt = self.alt_bc_mtx.sum(axis=1)
-        N_ref[N_ref == 0] = 1
-        N_alt[N_alt == 0] = 1
+        N_ref[N_ref == 0] = pseudo_count
+        N_alt[N_alt == 0] = pseudo_count
         k_ref = N_ref / (N_ref + N_alt)
         k_alt = N_alt / (N_ref + N_alt)
         self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + k_ref + k_alt),
@@ -81,8 +81,6 @@ class models:
         P(s_n|c) = P(c|s_n) / [P(c|s_1) + P(c|s_2) + ... + P(c|s_n)]
 
         """
-
-        P_s = []
 
         for n in range(self.num):
             matcalc = self.alt_bc_mtx.T.multiply(self.model_af.loc[:, n].apply(np.log2)).T \

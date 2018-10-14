@@ -32,6 +32,7 @@ class models:
         """
 
         err = 0.01  # error rate for model seeds
+        dbl = 0.02  # doublet ratio assumption
         self.ref_bc_mtx = base_calls_mtx[0]
         self.alt_bc_mtx = base_calls_mtx[1]
         self.all_POS = base_calls_mtx[2].tolist()
@@ -40,6 +41,7 @@ class models:
         self.P_s_c = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.assigned = []
+        self.P_s = [dbl]  # assuming P_s[0], i.e doublet has 2% probability
         for _ in range(self.num):
             self.assigned.append([])
         self.model_af = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
@@ -55,6 +57,7 @@ class models:
                     PAs.append(PA)
                     last = record.ID
             self.model_af.loc[:, n] = PAs
+            self.P_s.append((1 - dbl) / (self.num - 1))  # even initial distribution of P(s) across all other singlet samples
         self.model_af[self.model_af == 0] = err
         self.model_af[self.model_af == 1] = 1 - err
 
@@ -86,22 +89,16 @@ class models:
 
         """
 
-        P_s = []
-
         for n in range(self.num):
             matcalc = self.alt_bc_mtx.T.multiply(self.model_af.loc[:, n].apply(np.log2)).T \
                     + self.ref_bc_mtx.T.multiply((1 - self.model_af.loc[:, n]).apply(np.log2)).T
             self.lP_c_s.loc[:, n] = matcalc.sum(axis=0).tolist()[0]  # log likelihood to avoid python computation limit of 1e-323/1e+308
-            if n == 0:
-                P_s.append(0.02)  # probability of doublet ratio
-            else:
-                P_s.append((1 - 0.02) / (self.num - 1))  # even distribution of P(s) across all other singlet samples
     
         # log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
         for i in range(self.num):
             denom = 0
             for j in range(self.num):
-                denom += 2 ** (self.lP_c_s.loc[:, j] + np.log2(P_s[j]) - self.lP_c_s.loc[:, i] - np.log2(P_s[i]))
+                denom += 2 ** (self.lP_c_s.loc[:, j] + np.log2(self.P_s[j]) - self.lP_c_s.loc[:, i] - np.log2(self.P_s[i]))
             self.P_s_c.loc[:, i] = 1 / denom
 
 
