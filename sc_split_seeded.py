@@ -15,7 +15,7 @@ import datetime
 import csv
 
 class models:
-    def __init__(self, base_calls_mtx, num=2):
+    def __init__(self, base_calls_mtx, seed_vcf, num=2):
         """
         A complete model class containing SNVs, matrices counts, barcodes, model allele fraction with assigned cells 
 
@@ -31,6 +31,7 @@ class models:
 
         """
 
+        err = 0.01  # error rate for model seeds
         self.ref_bc_mtx = base_calls_mtx[0]
         self.alt_bc_mtx = base_calls_mtx[1]
         self.all_POS = base_calls_mtx[2].tolist()
@@ -47,13 +48,15 @@ class models:
         for n in range(1, self.num):
             PAs = []
             last = ''
-            in_vcf = vcf.Reader(open('input4.vcf', 'r'))
+            in_vcf = vcf.Reader(open(seed_vcf, 'r'))
             for record in in_vcf: 
                 if (record.ID != last) & (record.ID in self.all_POS):   # only need those SNVs captured in our matrices
                     PA = 0.5 * record.samples[n-1]['GP'][1] + record.samples[n-1]['GP'][2]
                     PAs.append(PA)
                     last = record.ID
             self.model_af.loc[:, n] = PAs
+        self.model_af[self.model_af == 0] = err
+        self.model_af[self.model_af == 1] = 1 - err
 
 
     def calculate_model_af(self):
@@ -61,10 +64,12 @@ class models:
         Update the model allele fraction by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
 
         """
+
+        pseudo_count = 0.01  # pseudo count for zero entries
         N_ref = self.ref_bc_mtx.sum(axis=1)
         N_alt = self.alt_bc_mtx.sum(axis=1)
-        N_ref[N_ref == 0] = 1
-        N_alt[N_alt == 0] = 1
+        N_ref[N_ref == 0] = pseudo_count
+        N_alt[N_alt == 0] = pseudo_count
         k_ref = N_ref / (N_ref + N_alt)
         k_alt = N_alt / (N_ref + N_alt)
         self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + k_ref + k_alt),
@@ -111,9 +116,9 @@ class models:
 
 
 
-def run_model(base_calls_mtx, num_models):
+def run_model(base_calls_mtx, seed_vcf, num_models):
 
-    model = models(base_calls_mtx, num_models)
+    model = models(base_calls_mtx, seed_vcf, num_models)
     
     iterations = 0
     sum_log_likelihood = [1,2]
@@ -160,18 +165,19 @@ def read_base_calls_matrix(ref_csv, alt_csv):
 
 def main():
 
-    num_models = 2          # number of models in each run
+    num_models = 8          # number of models in each run
 
     # input and output files
     ref_csv = 'ref_filtered.csv'  # reference matrix
     alt_csv = 'alt_filtered.csv'  # alternative matrix
+    seed_vcf = 'input8.vcf'  # vcf serving as model seed
 
     progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
     with open('wip.log', 'a') as myfile: myfile.write(progress)
     
     base_calls_mtx = read_base_calls_matrix(ref_csv, alt_csv)
 
-    run_model(base_calls_mtx, num_models)
+    run_model(base_calls_mtx, seed_vcf, num_models)
 
 if __name__ == '__main__':
     main()
