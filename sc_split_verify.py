@@ -48,13 +48,13 @@ def main():
     rr_demuxlet = rr_scsplit.copy()
     ra_demuxlet = ra_scsplit.copy()
     aa_demuxlet = aa_scsplit.copy()
-    rr_demuxlet = ra_demuxlet = aa_demuxlet = 0    
+    rr_demuxlet[:] = ra_demuxlet[:] = aa_demuxlet[:] = 0    
     for n in range(1, num):
         for line in open(dem_grp+str(n), 'r'):
             dem_result.append(line.strip())  # barcodes for each sample
-        rr_demuxlet[:, n] = binom.pmf(alt.loc[:,dem_result].sum(axis=1), (alt+ref).loc[:,dem_result].sum(axis=1), err).apply(np.log10)
-        ra_demuxlet[:, n] = binom.pmf(alt.loc[:,dem_result].sum(axis=1), (alt+ref).loc[:,dem_result].sum(axis=1), 0.5).apply(np.log10)
-        aa_demuxlet[:, n] = binom.pmf(alt.loc[:,dem_result].sum(axis=1), (alt+ref).loc[:,dem_result].sum(axis=1), 1-err).apply(np.log10)
+        rr_demuxlet.loc[:, n] = np.log10(binom.pmf(alt.loc[:,dem_result].sum(axis=1), (alt+ref).loc[:,dem_result].sum(axis=1), err))
+        ra_demuxlet.loc[:, n] = np.log10(binom.pmf(alt.loc[:,dem_result].sum(axis=1), (alt+ref).loc[:,dem_result].sum(axis=1), 0.5))
+        aa_demuxlet.loc[:, n] = np.log10(binom.pmf(alt.loc[:,dem_result].sum(axis=1), (alt+ref).loc[:,dem_result].sum(axis=1), 1-err))
     rr_demuxlet = (rr_demuxlet > 0.99) * 1
     ra_demuxlet = (ra_demuxlet > 0.99) * 2
     aa_demuxlet = (aa_demuxlet > 0.99) * 3
@@ -64,15 +64,15 @@ def main():
     rr_vcf = rr_scsplit.copy()
     ra_vcf = ra_scsplit.copy()
     aa_vcf = aa_scsplit.copy()
-    rr_vcf = ra_vcf = aa_vcf = 0    
+    rr_vcf[:] = ra_vcf[:] = aa_vcf[:] = 0    
     for record in vcf.Reader(open(ori_vcf, 'r')):
         for n in range (1, num):
             if record.samples[n-1]['GP'][0] > 0.99:
-                rr_vcf[record.CHROM + ':' + record.POS, n] = 1
+                rr_vcf.loc[record.CHROM + ':' + record.POS, n] = 1
             elif record.samples[n-1]['GP'][1] > 0.99:
-                rr_vcf[record.CHROM + ':' + record.POS, n] = 2
+                rr_vcf.loc[record.CHROM + ':' + record.POS, n] = 2
             elif record.samples[n-1]['GP'][2] > 0.99:
-                rr_vcf[record.CHROM + ':' + record.POS, n] = 3
+                rr_vcf.loc[record.CHROM + ':' + record.POS, n] = 3
 
     # output
     scsplit.to_csv('verify_scsplit.csv')
