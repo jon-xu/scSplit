@@ -7,7 +7,6 @@ Aug 2018
 
 import numpy as np
 import pandas as pd
-from scipy.stats import binom
 from scipy.sparse import csr_matrix
 import datetime
 import csv

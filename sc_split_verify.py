@@ -35,49 +35,50 @@ def main():
     num = len(P_s_c.columns)  # number of samples + 1 doublet state
     err = 0.01  # error rate assumption
     # binomial simulation for genotype likelihood P(D|AA,RA,RR) with the alt count vs total count condition and (err, 0.5, 1-err) as allele probability
-    rr_scsplit = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), err), index=all_POS, columns=range(num)).drop(0,1).apply(np.log10)
-    ra_scsplit = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 0.5), index=all_POS, columns=range(num)).drop(0,1).apply(np.log10)
-    aa_scsplit = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 1-err), index=all_POS, columns=range(num)).drop(0,1).apply(np.log10)
-    rr_scsplit = (rr_scsplit > 0.99) * 1
-    ra_scsplit = (ra_scsplit > 0.99) * 2
-    aa_scsplit = (aa_scsplit > 0.99) * 3
-    scsplit = rr_scsplit + ra_scsplit + aa_scsplit
+    rr = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), err), index=all_POS, columns=range(num)).drop(0,1).apply(np.log10)
+    ra = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 0.5), index=all_POS, columns=range(num)).drop(0,1).apply(np.log10)
+    aa = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 1-err), index=all_POS, columns=range(num)).drop(0,1).apply(np.log10)
+    rr = 1 / (1 + 10 ** (ra - rr) + 10 ** (aa - rr))
+    ra = 1 / (1 + 10 ** (rr - ra) + 10 ** (aa - ra))
+    aa = 1 / (1 + 10 ** (rr - aa) + 10 ** (ra - aa))   
+    rr = (rr > 0.99) * 1
+    ra = (ra > 0.99) * 2
+    aa = (aa > 0.99) * 3
+    scsplit = rr + ra + aa
     
     # build matrix from demuxlet assignment
-    dem_result = []
-    rr_demuxlet = rr_scsplit.copy()
-    ra_demuxlet = ra_scsplit.copy()
-    aa_demuxlet = aa_scsplit.copy()
-    rr_demuxlet[:] = ra_demuxlet[:] = aa_demuxlet[:] = 0    
+    rr[:] = ra[:] = aa[:] = 0    
     for n in range(1, num):
+        dem_result = []
         for line in open(dem_grp+str(n), 'r'):
             dem_result.append(line.strip())  # barcodes for each sample
-        rr_demuxlet.loc[:, n] = np.log10(binom.pmf(alt.loc[:,dem_result].sum(axis=1), (alt+ref).loc[:,dem_result].sum(axis=1), err))
-        ra_demuxlet.loc[:, n] = np.log10(binom.pmf(alt.loc[:,dem_result].sum(axis=1), (alt+ref).loc[:,dem_result].sum(axis=1), 0.5))
-        aa_demuxlet.loc[:, n] = np.log10(binom.pmf(alt.loc[:,dem_result].sum(axis=1), (alt+ref).loc[:,dem_result].sum(axis=1), 1-err))
-    rr_demuxlet = (rr_demuxlet > 0.99) * 1
-    ra_demuxlet = (ra_demuxlet > 0.99) * 2
-    aa_demuxlet = (aa_demuxlet > 0.99) * 3
-    demuxlet = rr_demuxlet + ra_demuxlet + aa_demuxlet
+        rr.loc[:, n] = np.log10(binom.pmf(alt.loc[:,dem_result].sum(axis=1), (alt+ref).loc[:,dem_result].sum(axis=1), err))
+        ra.loc[:, n] = np.log10(binom.pmf(alt.loc[:,dem_result].sum(axis=1), (alt+ref).loc[:,dem_result].sum(axis=1), 0.5))
+        aa.loc[:, n] = np.log10(binom.pmf(alt.loc[:,dem_result].sum(axis=1), (alt+ref).loc[:,dem_result].sum(axis=1), 1-err))
+    rr = 1 / (1 + 10 ** (ra - rr) + 10 ** (aa - rr))
+    ra = 1 / (1 + 10 ** (rr - ra) + 10 ** (aa - ra))
+    aa = 1 / (1 + 10 ** (rr - aa) + 10 ** (ra - aa))   
+    rr = (rr > 0.99) * 1
+    ra = (ra > 0.99) * 2
+    aa = (aa > 0.99) * 3
+    demuxlet = rr + ra + aa
 
     # build matrix from original vcf
-    rr_vcf = rr_scsplit.copy()
-    ra_vcf = ra_scsplit.copy()
-    aa_vcf = aa_scsplit.copy()
-    rr_vcf[:] = ra_vcf[:] = aa_vcf[:] = 0    
+    rr[:] = ra[:] = aa[:] = 0    
     for record in vcf.Reader(open(ori_vcf, 'r')):
         for n in range (1, num):
             if record.samples[n-1]['GP'][0] > 0.99:
-                rr_vcf.loc[record.CHROM + ':' + record.POS, n] = 1
+                rr.loc[record.CHROM + ':' + str(record.POS), n] = 1
             elif record.samples[n-1]['GP'][1] > 0.99:
-                rr_vcf.loc[record.CHROM + ':' + record.POS, n] = 2
+                rr.loc[record.CHROM + ':' + str(record.POS), n] = 2
             elif record.samples[n-1]['GP'][2] > 0.99:
-                rr_vcf.loc[record.CHROM + ':' + record.POS, n] = 3
+                rr.loc[record.CHROM + ':' + str(record.POS), n] = 3
+    vcf_all = rr + ra + aa
 
     # output
     scsplit.to_csv('verify_scsplit.csv')
     demuxlet.to_csv('verify_demuxlet.csv')
-    vcf.to_csv('verify_original.csv')
+    vcf_all.to_csv('verify_original.csv')
 
 if __name__ == '__main__':
     main()
