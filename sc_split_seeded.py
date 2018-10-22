@@ -47,16 +47,21 @@ class models:
         # set background alt count proportion as fixed allele fraction for each SNVs in the model, pseudo count is added for 0 counts on multi-base SNPs
         self.model_af.loc[:, 0] = (self.alt_bc_mtx.sum(axis=1) + 1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1) + 2)
         for n in range(1, self.num):
-            PAs = []
-            last = ''
-            in_vcf = vcf.Reader(open(seed_vcf, 'r'))
-            for record in in_vcf: 
-                if (record.ID != last) & (record.ID in self.all_POS):   # only need those SNVs captured in our matrices
-                    PA = 0.5 * record.samples[n-1]['GP'][1] + record.samples[n-1]['GP'][2]
-                    PAs.append(PA)
-                    last = record.ID
-            self.model_af.loc[:, n] = PAs
             self.P_s.append((1 - dbl) / (self.num - 1))  # even initial distribution of P(s) across all other singlet samples
+            # use total ref count and alt count on each position of csr_matrix to generate probability simulation using beta distribution
+            N_A = self.alt_bc_mtx.sum(axis=1) + 1
+            N_R = self.ref_bc_mtx.sum(axis=1) + 1
+            N_T = N_A + N_R
+            self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100*N_A/N_T, 100*N_R/N_T)]
+
+        last = ''
+        in_vcf = vcf.Reader(open(seed_vcf, 'r'))
+        for record in in_vcf:
+            if (record.ID != last) & (record.ID in self.all_POS):   # only need those SNVs captured in our matrices
+                for n in range(1, self.num):
+                    self.model_af.loc[record.ID, n] = 0.5 * record.samples[n-1]['GP'][1] + record.samples[n-1]['GP'][2]
+            last = record.ID
+
         self.model_af[self.model_af == 0] = err
         self.model_af[self.model_af == 1] = 1 - err
 
