@@ -14,7 +14,7 @@ import csv
 class models:
     def __init__(self, base_calls_mtx, num=2):
         """
-        A complete model class containing SNVs, matrices counts, barcodes, model allele fraction with assigned cells 
+        Model class containing SNVs, matrices counts, barcodes, model allele fraction with assigned cells 
 
         Parameters:
              base_calls_mtx(list of Dataframes): SNV-barcode matrix containing lists of base calls
@@ -41,28 +41,34 @@ class models:
         for _ in range(self.num):
             self.assigned.append([])
         self.model_af = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
-        # set background alt count proportion as fixed allele fraction for each SNVs in the model, pseudo count is added for 0 counts on multi-base SNPs
+        
+        # set background alt count proportion as allele fraction for each SNVs of doublet state, with pseudo count added for 0 counts on multi-base SNPs
         self.model_af.loc[:, 0] = (self.alt_bc_mtx.sum(axis=1) + 1) / (self.ref_bc_mtx.sum(axis=1) + self.alt_bc_mtx.sum(axis=1) + 2)
+
+        # initialise rest of states for the model
         for n in range(1, self.num):
-            # use total ref count and alt count on each position of csr_matrix to generate probability simulation using beta distribution
+            # use total ref count and alt count on each SNV position within sparse matrices to generate probability simulation using beta distribution
             N_A = self.alt_bc_mtx.sum(axis=1) + 1
             N_R = self.ref_bc_mtx.sum(axis=1) + 1
             N_T = N_A + N_R
-            self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100*N_A/N_T, 100*N_R/N_T)]            
+            self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100 * N_A / N_T, 100 * N_R / N_T)]            
             self.P_s.append((1 - dbl) / (self.num - 1))  # even initial distribution of P(s) across all other singlet samples
+
+
 
     def calculate_model_af(self):
         """
         Update the model allele fraction by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
 
         """
+
         pseudo_count = 0.01  # pseudo count for zero entries
         N_ref = self.ref_bc_mtx.sum(axis=1)
         N_alt = self.alt_bc_mtx.sum(axis=1)
         N_ref[N_ref == 0] = pseudo_count
         N_alt[N_alt == 0] = pseudo_count
-        k_ref = N_ref / (N_ref + N_alt)
-        k_alt = N_alt / (N_ref + N_alt)
+        k_ref = N_ref / (N_ref + N_alt) / 100
+        k_alt = N_alt / (N_ref + N_alt) / 100
         self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + k_ref + k_alt),
                                         index = self.all_POS, columns = range(self.num))
         self.model_af.loc[:, 0] = self.model_af.loc[:, 1:(self.num-1)].mean(axis=1)   # reset the background AF
@@ -78,15 +84,17 @@ class models:
         P(c|s_v) = P(N(A),N(R)|s) = P(g_A|s)^N(A) * (1-P(g_A|s))^N(R)
         log(P(c|s)) = sum_v{(N(A)_c,v*log(P(g_A|s)) + N(R)_c,v*log(1-P(g_A|s)))}
         P(s_n|c) = P(c|s_n) / [P(c|s_1) + P(c|s_2) + ... + P(c|s_n)]
+        log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
 
         """
 
+        # calculate likelihood P(c|s) based on allele probability
         for n in range(self.num):
             matcalc = self.alt_bc_mtx.T.multiply(self.model_af.loc[:, n].apply(np.log2)).T \
                     + self.ref_bc_mtx.T.multiply((1 - self.model_af.loc[:, n]).apply(np.log2)).T
             self.lP_c_s.loc[:, n] = matcalc.sum(axis=0).tolist()[0]  # log likelihood to avoid python computation limit of 1e-323/1e+308
     
-        # log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
+        # transform to cell sample probability using Baysian rule
         for i in range(self.num):
             denom = 0
             for j in range(self.num):
