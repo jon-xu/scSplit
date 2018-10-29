@@ -56,6 +56,7 @@ class models:
             self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100 * N_A / N_T, 100 * N_R / N_T)]            
             self.P_s.append((1 - dbl) / (self.num - 1))  # even initial distribution of P(s) across all other singlet samples
 
+### needs to change the P_s to adapt to non-even mix of samples
 
 
     def calculate_model_af(self):
