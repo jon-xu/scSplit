@@ -27,8 +27,6 @@ class models:
              model_af(list): list of num model allele frequencies based on P(A)
 
         """
-
-        dbl = 0.02  # doublet ratio assumption
         self.ref_bc_mtx = base_calls_mtx[0]
         self.alt_bc_mtx = base_calls_mtx[1]
         self.all_POS = base_calls_mtx[2].tolist()
@@ -37,55 +35,43 @@ class models:
         self.P_s_c = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.assigned = []
-        self.P_s = [dbl]  # assuming P_s[0], i.e doublet has 2% probability
         for _ in range(self.num):
             self.assigned.append([])
         self.model_af = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
-        self.seeds = []
+        self.seeds = [np.argmax((self.ref_bc_mtx + self.alt_bc_mtx).sum(axis=0))]
         self.pseudo = 0.01
 
-        # allele counts with pseudo count on each SNV position
-        N_A = self.alt_bc_mtx.sum(axis=1) + 1
-        N_R = self.ref_bc_mtx.sum(axis=1) + 1
-        N_T = N_A + N_R
 
+    def initialise_model(self, x):
+        dbl = 0.02  # doublet ratio assumption
+        # allele counts with pseudo count on each SNV position
+        N_A = self.alt_bc_mtx.sum(axis=1) + self.pseudo
+        N_R = self.ref_bc_mtx.sum(axis=1) + self.pseudo
+        N_T = N_A + N_R
+        k_ref = N_R / N_T
+        k_alt = N_A / N_T
         # set background alt count proportion as allele fraction for each SNVs of doublet state, with pseudo count added for 0 counts on multi-base SNPs
         self.model_af.loc[:, 0] = N_A / N_T
-
-        # initialise rest of states for the model
+        self.P_s = [dbl]  # assuming P_s[0], i.e doublet has 2% probability
+        # initialise all states using two different strategies (cell info for n <= x, all cell counts for n > x)
         for n in range(1, self.num):    
             self.P_s.append((1 - dbl) / (self.num - 1))  # even initial distribution of P(s) across all other singlet samples
-
-            # select new cell with highest read depth (first state) and low likelihood self.lP_c_s_init (rest states)
-            if n == 1:
-                self.seeds.append(np.argmax((self.ref_bc_mtx + self.alt_bc_mtx).sum(axis=0)))
+            if n <= x:  # use seed cells to initialise the model
+                barcode_alt = self.alt_bc_mtx.getcol(self.seeds[n-1]).toarray()
+                barcode_ref = self.ref_bc_mtx.getcol(self.seeds[n-1]).toarray()
+                self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)
             else:
-                selection = np.ma.array(self.lP_c_s.sum(axis=1).tolist(), mask = False)
-                for item in self.seeds:
-                    selection.mask[item] = True
-                self.seeds.append(np.argmin(selection))
-
-            # build model state from selected cell
-            barcode_alt = self.alt_bc_mtx.getcol(self.seeds[n-1]).toarray() + self.pseudo
-            barcode_ref = self.ref_bc_mtx.getcol(self.seeds[n-1]).toarray() + self.pseudo
-            k_ref = barcode_ref / (barcode_ref + barcode_alt)
-            k_alt = barcode_alt / (barcode_ref + barcode_alt)
-            self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)
-
-            # calculate likelihood P(c|s) based on allele probability of the state-initiating cell
-            matcalc = self.alt_bc_mtx.T.multiply(self.model_af.loc[:, n].apply(np.log2)).T \
-                    + self.ref_bc_mtx.T.multiply((1 - self.model_af.loc[:, n]).apply(np.log2)).T
-            self.lP_c_s.loc[:, n] = matcalc.sum(axis=0).tolist()[0]
-
-            # deal with low read-depth SNV positions
-            for pos in self.all_POS:
-                pos_index = self.all_POS.index(pos)
-                if self.ref_bc_mtx[pos_index, self.seeds[n-1]] <= 10:
-                    self.model_af.loc[pos, n] = np.random.beta(100 * (self.alt_bc_mtx[pos_index, :].sum() + 1) / (self.alt_bc_mtx[pos_index, :].sum() + 
-                        self.ref_bc_mtx[pos_index, :].sum() + 2), 100 * (self.ref_bc_mtx[pos_index, :].sum() + 1) / (self.alt_bc_mtx[pos_index, :].sum() + 
-                        self.ref_bc_mtx[pos_index, :].sum() + 2))
+                # use total ref count and alt count on each SNV position within sparse matrices to generate probability simulation using beta distribution
+                self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100 * N_A / N_T, 100 * N_R / N_T)]            
 
 
+    def next_seed(self, x):
+        for i in range(len(self.barcodes)):
+            if not(i in self.seeds) & (max(self.P_s_c.iloc[i, range(1,x+1)]) < 0.9):
+                self.seeds.append(i)
+                break
+                
+                
     def calculate_model_af(self):
         """
         Update the model allele fraction by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
@@ -144,19 +130,28 @@ def run_model(base_calls_mtx, num_models):
 
     model = models(base_calls_mtx, num_models)
     
-    iterations = 0
-    sum_log_likelihood = [1,2]
+    for m in range(1, num_models+1):
 
-    # commencing E-M
-    while sum_log_likelihood[-2] != sum_log_likelihood[-1]:
-        iterations += 1
-        progress = 'Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
-        with open('wip.log', 'a') as myfile: myfile.write(progress)
-        model.calculate_cell_likelihood()  # E-step, calculate the expected cell origin likelihood with a function of model.model_af (theta)
-        model.calculate_model_af()  # M-step, to optimise unknown model parameter model.model_af (theta)
-        # approximation due to python calculation limit
-        sum_log_likelihood.append(model.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], thus LL = Sum_c{log[Sum_s(P(c|s))]}
-        # sum_log_likelihood.append(((2**model.lP_c_s).sum(axis=1)+1e-323).apply(np.log2).sum())
+        # initialise model
+        model.initialise_model(m)
+
+        # commencing E-M
+        iterations = 0
+        sum_log_likelihood = [1,2]
+        while sum_log_likelihood[-2] != sum_log_likelihood[-1]:
+            iterations += 1
+            progress = 'Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
+            with open('wip.log', 'a') as myfile: myfile.write(progress)
+            model.calculate_cell_likelihood()  # E-step, calculate the expected cell origin likelihood with a function of model.model_af (theta)
+            model.calculate_model_af()  # M-step, to optimise unknown model parameter model.model_af (theta)
+            # approximation due to python calculation limit
+            sum_log_likelihood.append(model.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], thus LL = Sum_c{log[Sum_s(P(c|s))]}
+            # sum_log_likelihood.append(((2**model.lP_c_s).sum(axis=1)+1e-323).apply(np.log2).sum())
+
+        for n in range(num_models+1):
+            sorted(model.P_s_c.loc[model.P_s_c[n] >= 0.9].index.values.tolist()).to_csv('assigned-' + str(m))
+
+        model.next_seed(m)
 
     model.assign_cells()
 
@@ -167,6 +162,9 @@ def run_model(base_calls_mtx, num_models):
                 myfile.write(str(item) + '\n')
     model.P_s_c.to_csv('P_s_c.csv')
     model.model_af.to_csv('model_af.csv')
+    with open('seed_cells.txt', 'w') as myfile:
+        for item in model.P_s_c.index[model.seeds]:
+            myfile.write(str(item) + '\n')
     print(sum_log_likelihood)
     progress = 'scSplit finished at: ' + str(datetime.datetime.now()) + '\n'
     with open('wip.log', 'a') as myfile: myfile.write(progress)
