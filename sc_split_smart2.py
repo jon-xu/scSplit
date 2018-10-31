@@ -149,7 +149,11 @@ def run_model(base_calls_mtx, num_models):
             # sum_log_likelihood.append(((2**model.lP_c_s).sum(axis=1)+1e-323).apply(np.log2).sum())
 
         for n in range(num_models+1):
-            sorted(model.P_s_c.loc[model.P_s_c[n] >= 0.9].index.values.tolist()).to_csv('assigned-' + str(m))
+            outfile = open('r' + str(m) + 's' + str(n), 'w')
+            for line in sorted(model.P_s_c.loc[model.P_s_c[n] >= 0.9].index.values.tolist()):
+                outfile.write(line)
+                outfile.write('\n')
+            outfile.close()
 
         model.next_seed(m)
 
