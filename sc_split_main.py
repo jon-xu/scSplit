@@ -121,7 +121,7 @@ def run_model(base_calls_mtx, num_models):
     model = models(base_calls_mtx, num_models)
     
     iterations = 0
-    sum_log_likelihood = [1,2]
+    sum_log_likelihood = [1,2]  # dummy likelihood as a start
 
     # commencing E-M
     while sum_log_likelihood[-2] != sum_log_likelihood[-1]:

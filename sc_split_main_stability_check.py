@@ -27,6 +27,8 @@ class models:
              model_af(list): list of num model allele frequencies based on P(A)
 
         """
+
+        dbl = 0.02  # doublet ratio assumption
         self.ref_bc_mtx = base_calls_mtx[0]
         self.alt_bc_mtx = base_calls_mtx[1]
         self.all_POS = base_calls_mtx[2].tolist()
@@ -35,53 +37,41 @@ class models:
         self.P_s_c = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.assigned = []
+        self.P_s = [dbl]  # assuming P_s[0], i.e doublet has 2% probability
         for _ in range(self.num):
             self.assigned.append([])
         self.model_af = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
-        self.seeds = [np.argmax((self.ref_bc_mtx + self.alt_bc_mtx).sum(axis=0))]
-        self.pseudo = 0.01
 
-
-    def initialise_model(self, x):
-        dbl = 0.02  # doublet ratio assumption
         # allele counts with pseudo count on each SNV position
-        N_A = self.alt_bc_mtx.sum(axis=1) + self.pseudo
-        N_R = self.ref_bc_mtx.sum(axis=1) + self.pseudo
+        N_A = self.alt_bc_mtx.sum(axis=1) + 1
+        N_R = self.ref_bc_mtx.sum(axis=1) + 1
         N_T = N_A + N_R
-        k_ref = N_R / N_T
-        k_alt = N_A / N_T
+
         # set background alt count proportion as allele fraction for each SNVs of doublet state, with pseudo count added for 0 counts on multi-base SNPs
         self.model_af.loc[:, 0] = N_A / N_T
-        self.P_s = [dbl]  # assuming P_s[0], i.e doublet has 2% probability
-        # initialise all states using two different strategies (cell info for n <= x, all cell counts for n > x)
-        for n in range(1, self.num):    
+
+        # initialise rest of states for the model
+        for n in range(1, self.num):
+            # use total ref count and alt count on each SNV position within sparse matrices to generate probability simulation using beta distribution
+            self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100 * N_A / N_T, 100 * N_R / N_T)]            
             self.P_s.append((1 - dbl) / (self.num - 1))  # even initial distribution of P(s) across all other singlet samples
-            if n <= x:  # use seed cells to initialise the model
-                barcode_alt = self.alt_bc_mtx.getcol(self.seeds[n-1]).toarray()
-                barcode_ref = self.ref_bc_mtx.getcol(self.seeds[n-1]).toarray()
-                self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)
-            else:
-                # use total ref count and alt count on each SNV position within sparse matrices to generate probability simulation using beta distribution
-                self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100 * N_A / N_T, 100 * N_R / N_T)]            
+
+### needs to change the P_s to adapt to non-even mix of samples
 
 
-    def next_seed(self, x):
-        for i in range(len(self.barcodes)):
-            if not(i in self.seeds) & (max(self.P_s_c.iloc[i, range(1,x+1)]) < 0.9):
-                self.seeds.append(i)
-                break
-                
-                
     def calculate_model_af(self):
         """
         Update the model allele fraction by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
 
         """
 
-        N_ref = self.ref_bc_mtx.sum(axis=1) + self.pseudo
-        N_alt = self.alt_bc_mtx.sum(axis=1) + self.pseudo
-        k_ref = N_ref / (N_ref + N_alt)
-        k_alt = N_alt / (N_ref + N_alt)
+        pseudo_count = 0.01  # pseudo count for zero entries
+        N_ref = self.ref_bc_mtx.sum(axis=1)
+        N_alt = self.alt_bc_mtx.sum(axis=1)
+        N_ref[N_ref == 0] = pseudo_count
+        N_alt[N_alt == 0] = pseudo_count
+        k_ref = N_ref / (N_ref + N_alt) / 100
+        k_alt = N_alt / (N_ref + N_alt) / 100
         self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + k_ref + k_alt),
                                         index = self.all_POS, columns = range(self.num))
         self.model_af.loc[:, 0] = self.model_af.loc[:, 1:(self.num-1)].mean(axis=1)   # reset the background AF
@@ -130,14 +120,11 @@ def run_model(base_calls_mtx, num_models):
 
     model = models(base_calls_mtx, num_models)
     
-    for m in range(1, num_models+1):
-
-        # initialise model
-        model.initialise_model(m)
-
-        # commencing E-M
+    for m in range(30):
         iterations = 0
         sum_log_likelihood = [1,2]  # dummy likelihood as a start
+
+        # commencing E-M
         while sum_log_likelihood[-2] != sum_log_likelihood[-1]:
             iterations += 1
             progress = 'Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
@@ -148,16 +135,7 @@ def run_model(base_calls_mtx, num_models):
             sum_log_likelihood.append(model.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], thus LL = Sum_c{log[Sum_s(P(c|s))]}
             # sum_log_likelihood.append(((2**model.lP_c_s).sum(axis=1)+1e-323).apply(np.log2).sum())
 
-        for n in range(num_models+1):
-            outfile = open('r' + str(m) + 's' + str(n), 'w')
-            for line in sorted(model.P_s_c.loc[model.P_s_c[n] >= 0.9].index.values.tolist()):
-                outfile.write(line)
-                outfile.write('\n')
-            outfile.close()
-
-        model.next_seed(m)
-
-    model.assign_cells()
+        model.assign_cells()
 
     # generate outputs
     for n in range(num_models+1):
@@ -166,9 +144,6 @@ def run_model(base_calls_mtx, num_models):
                 myfile.write(str(item) + '\n')
     model.P_s_c.to_csv('P_s_c.csv')
     model.model_af.to_csv('model_af.csv')
-    with open('seed_cells.txt', 'w') as myfile:
-        for item in model.P_s_c.index[model.seeds]:
-            myfile.write(str(item) + '\n')
     print(sum_log_likelihood)
     progress = 'scSplit finished at: ' + str(datetime.datetime.now()) + '\n'
     with open('wip.log', 'a') as myfile: myfile.write(progress)
@@ -190,7 +165,7 @@ def read_base_calls_matrix(ref_csv, alt_csv):
 
 def main():
 
-    num_models = 8          # number of models in each run
+    num_models = 2          # number of models in each run
 
     # input and output files
     ref_csv = 'ref_filtered.csv'  # reference matrix
