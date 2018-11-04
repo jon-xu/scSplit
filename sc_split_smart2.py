@@ -53,25 +53,28 @@ class models:
         # set background alt count proportion as allele fraction for each SNVs of doublet state, with pseudo count added for 0 counts on multi-base SNPs
         self.model_af.loc[:, 0] = N_A / N_T
         self.P_s = [dbl]  # assuming P_s[0], i.e doublet has 2% probability
-        # initialise all states using two different strategies (cell info for n <= x, all cell counts for n > x)
-        for n in range(1, self.num):    
-            self.P_s.append((1 - dbl) / (self.num - 1))  # even initial distribution of P(s) across all other singlet samples
-            if n <= x:  # use seed cells to initialise the model
-                barcode_alt = self.alt_bc_mtx.getcol(self.seeds[n-1]).toarray()
-                barcode_ref = self.ref_bc_mtx.getcol(self.seeds[n-1]).toarray()
-                self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)
-            else:
-                # use total ref count and alt count on each SNV position within sparse matrices to generate probability simulation using beta distribution
-                self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100 * N_A / N_T, 100 * N_R / N_T)]            
 
-
-    def next_seed(self, x):
-        for i in range(2,len(self.barcodes)):   # index of second last is len()-2
-            j = (self.ref_bc_mtx + self.alt_bc_mtx).sum(axis=0).argsort()[0,len(self.barcodes)-i]
-            if (max(self.P_s_c.iloc[j, range(1,x+1)]) < 0.9) & (not(j in self.seeds)):
-                self.seeds.append(j)
-                break
-
+        if x < self.num:  # initialise with selected seeds
+            # initialise all states using two different strategies (cell info for n <= x, all cell counts for n > x)
+            for n in range(1, self.num):    
+                self.P_s.append((1 - dbl) / (self.num - 1))  # even initial distribution of P(s) across all other singlet samples
+                if n <= x:  # use seeded cells to initialise seeded states the model
+                    barcode_alt = self.alt_bc_mtx.getcol(self.seeds[n-1]).toarray()
+                    barcode_ref = self.ref_bc_mtx.getcol(self.seeds[n-1]).toarray()
+                    self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)
+                else:
+                    # for the rest states, use total ref/alt count on each SNV position within sparse matrices to generate probability simulation using beta distribution
+                    self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100 * N_A / N_T, 100 * N_R / N_T)]            
+        else:  # last round, initialise with all assigned barcodes
+            for n in range(1, self.num):
+                self.P_s.append((1 - dbl) / (self.num - 1))  # even initial distribution of P(s) across all other singlet samples
+                assigned  = (self.P_s_c[n] >= 0.9) * 1
+                N_A = self.alt_bc_mtx * assigned + self.pseudo
+                N_R = self.ref_bc_mtx * assigned + self.pseudo
+                N_T = N_A + N_R
+                k_ref = N_R / N_T
+                k_alt = N_A / N_T
+                self.model_af.loc[:, n] = (N_A + k_alt) / (N_T + k_alt + k_ref)
                 
     def calculate_model_af(self):
         """
@@ -116,6 +119,15 @@ class models:
             self.P_s_c.loc[:, i] = 1 / denom
 
 
+    def next_seed(self, x):
+        if x < self.num:
+            for i in range(2,len(self.barcodes)):
+                j = (self.ref_bc_mtx + self.alt_bc_mtx).sum(axis=0).argsort()[0,len(self.barcodes)-i]
+                if (max(self.P_s_c.iloc[j, range(1,x+1)]) < 0.9) & (not(j in self.seeds)):
+                    self.seeds.append(j)
+                    break
+
+
     def assign_cells(self):
         """
 	    Final assignment of cells according to P(s|c) >= 0.9
@@ -131,7 +143,7 @@ def run_model(base_calls_mtx, num_models):
 
     model = models(base_calls_mtx, num_models)
     
-    for m in range(1, num_models+1):
+    for m in range(1, num_models+1):  # num_model rounds, with each round one more additional barcode picked as seed for intialisation
 
         # initialise model
         model.initialise_model(m)
@@ -191,7 +203,7 @@ def read_base_calls_matrix(ref_csv, alt_csv):
 
 def main():
 
-    num_models = 8          # number of models in each run
+    num_models = 4          # number of models in each run
 
     # input and output files
     ref_csv = 'ref_filtered.csv'  # reference matrix
@@ -206,5 +218,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
