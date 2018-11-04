@@ -66,11 +66,12 @@ class models:
 
 
     def next_seed(self, x):
-        for i in range(len(self.barcodes)):
-            if not(i in self.seeds) & (max(self.P_s_c.iloc[i, range(1,x+1)]) < 0.9):
-                self.seeds.append(i)
+        for i in range(2,len(self.barcodes)):   # index of second last is len()-2
+            j = (self.ref_bc_mtx + self.alt_bc_mtx).sum(axis=0).argsort()[0,len(self.barcodes)-i]
+            if (max(self.P_s_c.iloc[j, range(1,x+1)]) < 0.9) & (not(j in self.seeds)):
+                self.seeds.append(j)
                 break
-                
+
                 
     def calculate_model_af(self):
         """

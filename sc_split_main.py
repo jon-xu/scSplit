@@ -164,7 +164,7 @@ def read_base_calls_matrix(ref_csv, alt_csv):
 
 def main():
 
-    num_models = 2          # number of models in each run
+    num_models = 4          # number of models in each run
 
     # input and output files
     ref_csv = 'ref_filtered.csv'  # reference matrix
