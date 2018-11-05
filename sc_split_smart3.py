@@ -1,5 +1,5 @@
 """
-Reference free AF-based demultiplexing on pooled scRNA-seq
+Reference free AF-based demultiplexing on pooled scRNA-seq (second intialisation, but including doublets and excluding multiplet)
 Jon Xu (jun.xu@uq.edu.au)
 Lachlan Coin
 Aug 2018
