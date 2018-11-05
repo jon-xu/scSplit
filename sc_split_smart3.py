@@ -31,7 +31,8 @@ class models:
         self.alt_bc_mtx = base_calls_mtx[1]
         self.all_POS = base_calls_mtx[2].tolist()
         self.barcodes = base_calls_mtx[3].tolist()
-        self.num = num + 1  # including an additional background state for doublets
+        self.num = num + int(num * (num -1) / 2) + 1  # including additional background states for doublets and one for all other multiplets
+        self.singlets = num  # number of singlet states
         self.P_s_c = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.assigned = []
@@ -43,6 +44,9 @@ class models:
 
 
     def initialise_model(self, x):
+        
+        ### initialise multiplet:
+
         dbl = 0.02  # doublet ratio assumption
         # allele counts with pseudo count on each SNV position
         N_A = self.alt_bc_mtx.sum(axis=1) + self.pseudo
@@ -52,12 +56,14 @@ class models:
         k_alt = N_A / N_T
         # set background alt count proportion as allele fraction for each SNVs of doublet state, with pseudo count added for 0 counts on multi-base SNPs
         self.model_af.loc[:, 0] = N_A / N_T
-        self.P_s = [dbl]  # assuming P_s[0], i.e doublet has 2% probability
+        self.P_s = [1e-10]  # assuming P_s[0], i.e doublet has 2% probability
 
-        if x < self.num:  # initialise with selected seeds
+        ### initialise singlets:
+
+        if x <= self.singlets:  # initialise with selected seeds
             # initialise all states using two different strategies (cell info for n <= x, all cell counts for n > x)
-            for n in range(1, self.num):    
-                self.P_s.append((1 - dbl) / (self.num - 1))  # even initial distribution of P(s) across all other singlet samples
+            for n in range(1, self.singlets + 1):    
+                self.P_s.append((1 - dbl) / (self.singlets))  # even initial distribution of P(s) across all other singlet samples
                 if n <= x:  # use seeded cells to initialise seeded states the model
                     barcode_alt = self.alt_bc_mtx.getcol(self.seeds[n-1]).toarray()
                     barcode_ref = self.ref_bc_mtx.getcol(self.seeds[n-1]).toarray()
@@ -65,8 +71,8 @@ class models:
                 else:
                     # for the rest states, use total ref/alt count on each SNV position within sparse matrices to generate probability simulation using beta distribution
                     self.model_af.loc[:, n] = [item[0] for item in np.random.beta(100 * N_A / N_T, 100 * N_R / N_T)]            
-        else:  # last round, initialise with all assigned barcodes
-            for n in range(1, self.num):
+        else:  # final round, initialise with top20 confidently assigned barcodes
+            for n in range(1, self.singlets + 1):
                 topN = (self.P_s_c[n].argsort() >= (len(self.barcodes) - 20)) * 1
                 N_A = self.alt_bc_mtx * topN + self.pseudo
                 N_R = self.ref_bc_mtx * topN + self.pseudo
@@ -75,23 +81,14 @@ class models:
                 k_alt = N_A / N_T
                 self.model_af.loc[:, n] = (N_A + k_alt) / (N_T + k_alt + k_ref)
                 
-    def calculate_model_af(self):
-        """
-        Update the model allele fraction by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
-
-        """
-
-        N_ref = self.ref_bc_mtx.sum(axis=1) + self.pseudo
-        N_alt = self.alt_bc_mtx.sum(axis=1) + self.pseudo
-        k_ref = N_ref / (N_ref + N_alt)
-        k_alt = N_alt / (N_ref + N_alt)
-        self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + k_ref + k_alt),
-                                        index = self.all_POS, columns = range(self.num))
-        self.model_af.loc[:, 0] = self.model_af.loc[:, 1:(self.num-1)].mean(axis=1)   # reset the background AF
-
-        # reset sample prior probabilities based on sum(P(s|c))
-        self.P_s = self.P_s_c.sum().tolist()
-        self.P_s = [item/sum(self.P_s) for item in self.P_s]
+        ### initialise doublets:
+        
+        index = self.singlets + 1  # start from doublet states
+        for i in range(1, self.singlets):
+            for j in range(i + 1, self.singlets + 1):
+                self.P_s.append(dbl / (self.num - self.singlets - 1))     # even distribution of doublet probability on all doublet states
+                self.model_af.loc[:, index] = (self.model_af.loc[:, i] + self.model_af.loc[:, j]) / 2   # mean of relevant two singlet states
+                index += 1
 
 
     def calculate_cell_likelihood(self):
@@ -118,8 +115,33 @@ class models:
             self.P_s_c.loc[:, i] = 1 / denom
 
 
+    def calculate_model_af(self):
+        """
+        Update the model allele fraction by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
+
+        """
+
+        N_ref = self.ref_bc_mtx.sum(axis=1) + self.pseudo
+        N_alt = self.alt_bc_mtx.sum(axis=1) + self.pseudo
+        k_ref = N_ref / (N_ref + N_alt)
+        k_alt = N_alt / (N_ref + N_alt)
+        self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + k_ref + k_alt),
+                                        index = self.all_POS, columns = range(self.num))
+        self.model_af.loc[:, 0] = self.model_af.loc[:, 1:(self.num-1)].mean(axis=1)   # reset the multiplet AF
+        # reset doublet AF
+        index = self.singlets + 1  # start from doublet states
+        for i in range(1, self.singlets):
+            for j in range(i + 1, self.singlets + 1):
+                self.model_af.loc[:, index] = (self.model_af.loc[:, i] + self.model_af.loc[:, j]) / 2   # mean of relevant two singlet states
+                index += 1
+
+        # reset sample prior probabilities based on sum(P(s|c))
+        self.P_s = self.P_s_c.sum(axis=0).tolist()
+        self.P_s = [item/sum(self.P_s) for item in self.P_s]
+
+
     def next_seed(self, x):
-        if x < self.num:
+        if x <= self.singlets:
             for i in range(2,len(self.barcodes)):
                 j = (self.ref_bc_mtx + self.alt_bc_mtx).sum(axis=0).argsort()[0,len(self.barcodes)-i]
                 if (max(self.P_s_c.iloc[j, range(1,x+1)]) < 0.9) & (not(j in self.seeds)):
@@ -142,7 +164,7 @@ def run_model(base_calls_mtx, num_models):
 
     model = models(base_calls_mtx, num_models)
     
-    for m in range(1, num_models+1):  # num_model rounds, with each round one more additional barcode picked as seed for intialisation
+    for m in range(1, num_models + 1):  # num_model rounds, with each round one more additional barcode picked as seed for intialisation
 
         # initialise model
         model.initialise_model(m)
@@ -160,19 +182,12 @@ def run_model(base_calls_mtx, num_models):
             sum_log_likelihood.append(model.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], thus LL = Sum_c{log[Sum_s(P(c|s))]}
             # sum_log_likelihood.append(((2**model.lP_c_s).sum(axis=1)+1e-323).apply(np.log2).sum())
 
-        for n in range(num_models+1):
-            outfile = open('r' + str(m) + 's' + str(n), 'w')
-            for line in sorted(model.P_s_c.loc[model.P_s_c[n] >= 0.9].index.values.tolist()):
-                outfile.write(line)
-                outfile.write('\n')
-            outfile.close()
-
         model.next_seed(m)
 
     model.assign_cells()
 
     # generate outputs
-    for n in range(num_models+1):
+    for n in range(model.num):
         with open('barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
