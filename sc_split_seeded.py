@@ -14,7 +14,7 @@ import datetime
 import csv
 
 class models:
-    def __init__(self, base_calls_mtx, seed_vcf, num=2):
+    def __init__(self, base_calls_mtx, seed_vcf, num):
         """
         A complete model class containing SNVs, matrices counts, barcodes, model allele fraction with assigned cells 
 
