@@ -31,7 +31,7 @@ class models:
         self.alt_bc_mtx = base_calls_mtx[1]
         self.all_POS = base_calls_mtx[2].tolist()
         self.barcodes = base_calls_mtx[3].tolist()
-        self.num = num + int(num * (num -1) / 2) + 1  # including additional background states for doublets and one for all other multiplets
+        self.num = num + int(num * (num - 1) / 2) + 1  # including additional background states for doublets and one for all other multiplets
         self.singlets = num  # number of singlet states
         self.P_s_c = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
