@@ -33,12 +33,12 @@ class models:
         self.barcodes = base_calls_mtx[3].tolist()
         self.num = num + int(num * (num - 1) / 2) + 1  # including additional background states for doublets and one for all other multiplets
         self.singlets = num  # number of singlet states
-        self.P_s_c = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
-        self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
+        self.P_s_c = pd.DataFrame(0, index = self.barcodes, columns = range(1, self.num))
+        self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(1, self.num))
         self.assigned = []
-        for _ in range(self.num):
+        for _ in range(1, self.num):
             self.assigned.append([])
-        self.model_af = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
+        self.model_af = pd.DataFrame(0, index=self.all_POS, columns=range(1, self.num))
         self.seeds = [np.argmax((self.ref_bc_mtx + self.alt_bc_mtx).sum(axis=0))]
         self.pseudo = 0.01
 
@@ -102,15 +102,15 @@ class models:
         """
 
         # calculate likelihood P(c|s) based on allele probability
-        for n in range(self.num):
+        for n in range(1, self.num):
             matcalc = self.alt_bc_mtx.T.multiply(self.model_af.loc[:, n].apply(np.log2)).T \
                     + self.ref_bc_mtx.T.multiply((1 - self.model_af.loc[:, n]).apply(np.log2)).T
             self.lP_c_s.loc[:, n] = matcalc.sum(axis=0).tolist()[0]  # log likelihood to avoid python computation limit of 1e-323/1e+308
     
         # transform to cell sample probability using Baysian rule
-        for i in range(self.num):
+        for i in range(1, self.num):
             denom = 0
-            for j in range(self.num):
+            for j in range(1, self.num):
                 denom += 2 ** (self.lP_c_s.loc[:, j] + np.log2(self.P_s[j]) - self.lP_c_s.loc[:, i] - np.log2(self.P_s[i]))
             self.P_s_c.loc[:, i] = 1 / denom
 
@@ -126,8 +126,7 @@ class models:
         k_ref = N_ref / (N_ref + N_alt)
         k_alt = N_alt / (N_ref + N_alt)
         self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + k_ref + k_alt),
-                                        index = self.all_POS, columns = range(self.num))
-        self.model_af.loc[:, 0] = self.model_af.loc[:, 1:(self.num-1)].mean(axis=1)   # reset the multiplet AF
+                                        index = self.all_POS, columns = range(1, self.num))
         # reset doublet AF
         index = self.singlets + 1  # start from doublet states
         for i in range(1, self.singlets):
@@ -140,8 +139,13 @@ class models:
         #self.P_s = [item/sum(self.P_s) for item in self.P_s]
 
 
-    def next_seed(self, x):
+    def update_seed(self, x):
         if x <= self.singlets:
+        # update the current seeds with most confident assignments
+            for i in range(x):
+                self.seeds[i] = self.P_s_c[i+1].values.argmax()
+
+        # pick barcode as seed for next state
             for i in range(2,len(self.barcodes)):
                 j = (self.ref_bc_mtx + self.alt_bc_mtx).sum(axis=0).argsort()[0,len(self.barcodes)-i]
                 if (max(self.P_s_c.iloc[j, range(1,x+1)]) < 0.5) & (not(j in self.seeds)):
@@ -155,8 +159,8 @@ class models:
 
 	    """
 
-        for n in range(self.num):
-            self.assigned[n] = sorted(self.P_s_c.loc[self.P_s_c[n] >= 0.9].index.values.tolist())
+        for n in range(1, self.num):
+            self.assigned[n - 1] = sorted(self.P_s_c.loc[self.P_s_c[n] >= 0.9].index.values.tolist())
 
 
 
@@ -182,14 +186,14 @@ def run_model(base_calls_mtx, num_models):
             sum_log_likelihood.append(model.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], thus LL = Sum_c{log[Sum_s(P(c|s))]}
             # sum_log_likelihood.append(((2**model.lP_c_s).sum(axis=1)+1e-323).apply(np.log2).sum())
 
-        model.next_seed(m)
+        model.update_seed(m)
 
     model.assign_cells()
 
     # generate outputs
-    for n in range(model.num):
+    for n in range(1, model.num):
         with open('barcodes_{}.csv'.format(n), 'w') as myfile:
-            for item in model.assigned[n]:
+            for item in model.assigned[n - 1]:
                 myfile.write(str(item) + '\n')
     model.P_s_c.to_csv('P_s_c.csv')
     model.model_af.to_csv('model_af.csv')
