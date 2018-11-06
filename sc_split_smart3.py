@@ -56,7 +56,7 @@ class models:
         k_alt = N_A / N_T
         # set background alt count proportion as allele fraction for each SNVs of doublet state, with pseudo count added for 0 counts on multi-base SNPs
         self.model_af.loc[:, 0] = N_A / N_T
-        self.P_s = [1e-10]  # assuming P_s[0], i.e doublet has 2% probability
+        self.P_s = []  # assuming P_s[0], i.e doublet has 2% probability
 
         ### initialise singlets:
 
@@ -136,15 +136,15 @@ class models:
                 index += 1
 
         # reset sample prior probabilities based on sum(P(s|c))
-        self.P_s = self.P_s_c.sum(axis=0).tolist()
-        self.P_s = [item/sum(self.P_s) for item in self.P_s]
+        #self.P_s = self.P_s_c.sum(axis=0).tolist()
+        #self.P_s = [item/sum(self.P_s) for item in self.P_s]
 
 
     def next_seed(self, x):
         if x <= self.singlets:
             for i in range(2,len(self.barcodes)):
                 j = (self.ref_bc_mtx + self.alt_bc_mtx).sum(axis=0).argsort()[0,len(self.barcodes)-i]
-                if (max(self.P_s_c.iloc[j, range(1,x+1)]) < 0.9) & (not(j in self.seeds)):
+                if (max(self.P_s_c.iloc[j, range(1,x+1)]) < 0.5) & (not(j in self.seeds)):
                     self.seeds.append(j)
                     break
 
@@ -196,6 +196,7 @@ def run_model(base_calls_mtx, num_models):
     for index, item in enumerate(model.P_s_c.index[model.seeds]):
         with open ('seed_{}.txt'.format(str(index+1)), 'w') as myfile:
             myfile.write(item)
+    print(model.P_s)
     print(sum_log_likelihood)
     progress = 'scSplit finished at: ' + str(datetime.datetime.now()) + '\n'
     with open('wip.log', 'a') as myfile: myfile.write(progress)
