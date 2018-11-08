@@ -90,8 +90,8 @@ class models:
         self.model_af.loc[:, 0] = self.model_af.loc[:, 1:(self.num-1)].mean(axis=1)   # reset the background AF
 
         # reset sample prior probabilities based on sum(P(s|c))
-        #self.P_s = self.P_s_c.sum().tolist()
-        #self.P_s = [item/sum(self.P_s) for item in self.P_s]
+        self.P_s = self.P_s_c.sum().tolist()
+        self.P_s = [item/sum(self.P_s) for item in self.P_s]
 
 
     def calculate_cell_likelihood(self):
