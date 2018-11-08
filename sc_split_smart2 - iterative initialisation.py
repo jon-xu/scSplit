@@ -75,6 +75,7 @@ class models:
                 k_alt = N_A / N_T
                 self.model_af.loc[:, n] = (N_A + k_alt) / (N_T + k_alt + k_ref)
                 
+                
     def calculate_model_af(self):
         """
         Update the model allele fraction by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
