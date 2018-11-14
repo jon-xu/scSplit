@@ -39,7 +39,7 @@ class models:
             self.assigned.append([])
         self.model_af = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         self.seeds = [np.argmax((self.ref_bc_mtx + self.alt_bc_mtx).sum(axis=0))]
-        self.pseudo = 0.01
+        self.pseudo = 1
 
 
     def initialise_model(self, x):

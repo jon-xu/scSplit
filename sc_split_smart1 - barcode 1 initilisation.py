@@ -42,7 +42,7 @@ class models:
             self.assigned.append([])
         self.model_af = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         self.seeds = []
-        self.pseudo = 0.01
+        self.pseudo = 1
 
         # allele counts with pseudo count on each SNV position
         N_A = self.alt_bc_mtx.sum(axis=1) + self.pseudo
