@@ -8,7 +8,9 @@ Aug 2018
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
+from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 import datetime
 import csv
 
@@ -39,7 +41,6 @@ class models:
         for _ in range(self.num):
             self.assigned.append([])
         self.model_af = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
-        self.seeds = [np.argmax((self.ref_bc_mtx + self.alt_bc_mtx).sum(axis=0))]
         self.pseudo = 1
 
         # set background alt count proportion as allele fraction for each SNVs of doublet state, with pseudo count added for 0 counts on multi-base SNPs
@@ -54,11 +55,37 @@ class models:
         for n in range(1, self.num):    
             self.P_s.append((1 - dbl) / (self.num - 1))  # even initial distribution of P(s) across all other singlet samples
 
-        # find barcodes for state initialisation, using PCA
+        # find barcodes for state initialisation, using subsetting/PCA/K-mean
+        base_mtx = (self.alt_bc_mtx + self.ref_bc_mtx).toarray()
+        rows = [*range(base_mtx.shape[0])]
+        cols = [*range(base_mtx.shape[1])]
+        irows = np.array(rows)
+        icols = np.array(cols)
+        nrows = len(rows)
+        ncols = len(cols)
+        mrows = mcols = 0
+        while (mrows < (0.9 * nrows)) or (mcols < (0.9 * ncols)):
+            rows = np.count_nonzero(base_mtx, axis=1).argsort()[int(nrows * 0.1):nrows]
+            cols = np.count_nonzero(base_mtx, axis=0).argsort()[int(ncols * 0.1):ncols]
+            irows = irows[rows.tolist()]     # track the row numbers of original matrix
+            icols = icols[cols.tolist()]     # track the col numbers of original matrix
+            nrows = len(rows)
+            ncols = len(cols)
+            base_mtx = base_mtx[rows][:,cols]
+            mrows = min(np.count_nonzero(base_mtx, axis=0))     # minimum non-zero rows in all cols
+            mcols = min(np.count_nonzero(base_mtx, axis=1))     # minimum non-zero cols in all rows
+        alt_subset = self.alt_bc_mtx[irows][:, icols].todense()
+        ref_subset = self.ref_bc_mtx[irows][:, icols].todense()
+        alt_prop = (alt_subset + 0.01) / (alt_subset + ref_subset + 0.02)
+        alt_pca = StandardScaler().fit_transform(alt_prop.T)
+        pca = PCA(n_components=10)
+        pca_alt = pca.fit_transform(alt_pca)
+        kmeans = KMeans(n_clusters=self.num-1, random_state=0).fit(pca_alt)
 
-        barcode_alt = self.alt_bc_mtx.getcol(self.seeds[n-1]).toarray()
-        barcode_ref = self.ref_bc_mtx.getcol(self.seeds[n-1]).toarray()
-        self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)       
+        for n in range(1, self.num):
+            barcode_alt = np.array(self.alt_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
+            barcode_ref = np.array(self.ref_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
+            self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)       
 
 
     def run_EM(self):
@@ -139,9 +166,6 @@ class models:
                     myfile.write(str(item) + '\n')
         self.P_s_c.to_csv('P_s_c.csv')
         self.model_af.to_csv('model_af.csv')
-        for index, item in enumerate(self.P_s_c.index[self.seeds]):
-            with open ('seed_{}.txt'.format(str(index+1)), 'w') as myfile:
-                myfile.write(item)
         print(self.sum_log_likelihood)
         progress = 'scSplit finished at: ' + str(datetime.datetime.now()) + '\n'
         with open('wip.log', 'a') as myfile: myfile.write(progress)
