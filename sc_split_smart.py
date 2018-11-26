@@ -64,11 +64,14 @@ class models:
         nrows = len(rows)
         ncols = len(cols)
         mrows = mcols = 0
+
+        # loop when non zero rows/columns haven't been 90% of the subset matrix:
         while (mrows < (0.9 * nrows)) or (mcols < (0.9 * ncols)):
+            # get rid of the 10% non-non-zero rows/cols
             rows = np.count_nonzero(base_mtx, axis=1).argsort()[int(nrows * 0.1):nrows]
             cols = np.count_nonzero(base_mtx, axis=0).argsort()[int(ncols * 0.1):ncols]
-            irows = irows[rows.tolist()]     # track the row numbers of original matrix
-            icols = icols[cols.tolist()]     # track the col numbers of original matrix
+            irows = irows[rows.tolist()]     # keep track of the row numbers of original matrix
+            icols = icols[cols.tolist()]     # keep track of the col numbers of original matrix
             nrows = len(rows)
             ncols = len(cols)
             base_mtx = base_mtx[rows][:,cols]
