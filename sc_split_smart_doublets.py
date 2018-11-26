@@ -64,7 +64,7 @@ class models:
 
         # loop when non zero rows/columns haven't been 90% of the subset matrix:
         while (mrows < (0.9 * nrows)) or (mcols < (0.9 * ncols)):
-            # get rid of the 10% non-non-zero rows/cols
+            # get rid of the 10% zero rows/cols
             rows = np.count_nonzero(base_mtx, axis=1).argsort()[int(nrows * 0.1):nrows]
             cols = np.count_nonzero(base_mtx, axis=0).argsort()[int(ncols * 0.1):ncols]
             irows = irows[rows.tolist()]     # keep track of the row numbers of original matrix
@@ -82,10 +82,10 @@ class models:
         pca_alt = pca.fit_transform(alt_pca)
         kmeans = KMeans(n_clusters=self.singlets, random_state=0).fit(pca_alt)
 
-        for n in range(1, self.singlets+1):
+        for n in range(self.singlets):
             barcode_alt = np.array(self.alt_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
             barcode_ref = np.array(self.ref_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
-            self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref) 
+            self.model_af.loc[:, n+1] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref) 
 
         # set background alt count proportion as allele fraction for each SNVs of doublet state, with pseudo count added for 0 counts on multi-base SNPs
         for n in range(self.singlets):  # initialise singlet states  
@@ -164,7 +164,7 @@ class models:
         # generate outputs
         for n in range(1, self.num):
             with open('barcodes_{}.csv'.format(n), 'w') as myfile:
-                for item in self.assigned[n]:
+                for item in self.assigned[n-1]:
                     myfile.write(str(item) + '\n')
         self.P_s_c.to_csv('P_s_c.csv')
         self.model_af.to_csv('model_af.csv')

@@ -88,10 +88,10 @@ class models:
         pca_alt = pca.fit_transform(alt_pca)
         kmeans = KMeans(n_clusters=self.num-1, random_state=0).fit(pca_alt)
 
-        for n in range(1, self.num):
+        for n in range(self.num-1):
             barcode_alt = np.array(self.alt_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
             barcode_ref = np.array(self.ref_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
-            self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)       
+            self.model_af.loc[:, n+1] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)       
 
 
     def run_EM(self):
