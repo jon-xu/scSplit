@@ -66,7 +66,7 @@ class models:
         mrows = mcols = 0
         while (mrows < (0.9 * nrows)) or (mcols < (0.9 * ncols)):
             rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows))*nrows))))    # random 10% bottom rows
-            rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols))*ncols))))    # randome 10% bottom cols
+            rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols))*ncols))))    # random 10% bottom cols
             rows = np.count_nonzero(base_mtx, axis=1).argsort().tolist()
             cols = np.count_nonzero(base_mtx, axis=0).argsort().tolist()
             for item in rbrows:
