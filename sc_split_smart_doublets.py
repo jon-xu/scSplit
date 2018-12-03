@@ -207,8 +207,8 @@ def main():
             assigned = model.assigned
 
     # generate outputs
-    for n in range(num_models+1):
-        with open('barcodes_{}.csv'.format(n), 'w') as myfile:
+    for n in range(num_models+int(num_models*(num_models-1)/2)):
+        with open('barcodes_{}.csv'.format(n+1), 'w') as myfile:
             for item in assigned[n]:
                 myfile.write(str(item) + '\n')
     print(max_likelihood)
