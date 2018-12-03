@@ -44,14 +44,6 @@ class models:
         self.model_af = pd.DataFrame(0, index=self.all_POS, columns=range(1, self.num))
         self.pseudo = 1
 
-        dbl = 0.02  # assuming probability of having a doublet barcode is 2%
-        N_A = self.alt_bc_mtx.sum(axis=1) + self.pseudo
-        N_R = self.ref_bc_mtx.sum(axis=1) + self.pseudo
-        N_T = N_A + N_R
-        k_ref = N_R / N_T
-        k_alt = N_A / N_T
-        self.P_s = []
-
         # find barcodes for state initialisation, using subsetting/PCA/K-mean
         base_mtx = (self.alt_bc_mtx + self.ref_bc_mtx).toarray()
         rows = [*range(base_mtx.shape[0])]
@@ -61,14 +53,18 @@ class models:
         nrows = len(rows)
         ncols = len(cols)
         mrows = mcols = 0 
-
         # loop when non zero rows/columns haven't been 90% of the subset matrix:
         while (mrows < (0.9 * nrows)) or (mcols < (0.9 * ncols)):
-            # get rid of the 10% zero rows/cols
-            rows = np.count_nonzero(base_mtx, axis=1).argsort()[int(nrows * 0.1):nrows]
-            cols = np.count_nonzero(base_mtx, axis=0).argsort()[int(ncols * 0.1):ncols]
-            irows = irows[rows.tolist()]     # keep track of the row numbers of original matrix
-            icols = icols[cols.tolist()]     # keep track of the col numbers of original matrix
+            rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows))*nrows))))    # random 10% bottom rows
+            rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols))*ncols))))    # random 10% bottom cols
+            rows = np.count_nonzero(base_mtx, axis=1).argsort().tolist()
+            cols = np.count_nonzero(base_mtx, axis=0).argsort().tolist()
+            for item in rbrows:
+                rows.remove(item)
+            for item in rbcols:
+                cols.remove(item)
+            irows = irows[rows]     # track the row index of original matrix
+            icols = icols[cols]     # track the col index of original matrix
             nrows = len(rows)
             ncols = len(cols)
             base_mtx = base_mtx[rows][:,cols]
@@ -82,14 +78,20 @@ class models:
         pca_alt = pca.fit_transform(alt_pca)
         kmeans = KMeans(n_clusters=self.singlets, random_state=0).fit(pca_alt)
 
-        for n in range(self.singlets):
+        # background allele fractions
+        dbl = 0.02  # assuming probability of having a doublet barcode is 2%
+        N_A = self.alt_bc_mtx.sum(axis=1) + self.pseudo
+        N_R = self.ref_bc_mtx.sum(axis=1) + self.pseudo
+        N_T = N_A + N_R
+        k_ref = N_R / N_T
+        k_alt = N_A / N_T
+        self.P_s = []
+        # for each SNV of singlet states, with pseudo count added for 0 counts on multi-base SNPs
+        for n in range(self.singlets):  # initialise singlet states (from P_s[0])
+            self.P_s.append((1 - dbl) / self.singlets)  # even distribution of P(s) across all other singlet samples    
             barcode_alt = np.array(self.alt_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
             barcode_ref = np.array(self.ref_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
-            self.model_af.loc[:, n+1] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref) 
-
-        # set background alt count proportion as allele fraction for each SNVs of doublet state, with pseudo count added for 0 counts on multi-base SNPs
-        for n in range(self.singlets):  # initialise singlet states  
-            self.P_s.append((1 - dbl) / self.singlets)  # even initial distribution of P(s) across all other singlet samples    
+            self.model_af.loc[:, n+1] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)
 
         index = self.singlets + 1  # initialise multiple doublet states
         # loop on each singlet state pairs to create doublet states
@@ -97,7 +99,23 @@ class models:
             for j in range(i + 1, self.singlets + 1):
                 self.P_s.append(dbl / (self.num - self.singlets - 1))     # even distribution of doublet probability on all doublet states
                 self.model_af.loc[:, index] = (self.model_af.loc[:, i] + self.model_af.loc[:, j]) / 2   # mean of relevant two singlet states
-                index += 1  
+                index += 1
+
+
+    def run_EM(self):
+
+        # commencing E-M
+        iterations = 0
+        self.sum_log_likelihood = [1,2]  # dummy likelihood as a start
+        while self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]:
+            iterations += 1
+            progress = 'Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
+            with open('wip.log', 'a') as myfile: myfile.write(progress)
+            self.calculate_cell_likelihood()  # E-step, calculate the expected cell origin likelihood with a function of self.model_af (theta)
+            self.calculate_model_af()  # M-step, to optimise unknown model parameter self.model_af (theta)
+            # approximation due to python calculation limit
+            self.sum_log_likelihood.append(self.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], thus LL = Sum_c{log[Sum_s(P(c|s))]}
+            # self.sum_log_likelihood.append(((2**self.lP_c_s).sum(axis=1)+1e-323).apply(np.log2).sum())
 
 
     def calculate_cell_likelihood(self):
@@ -159,36 +177,6 @@ class models:
             self.assigned[n-1] = sorted(self.P_s_c.loc[self.P_s_c[n] >= 0.9].index.values.tolist())
 
 
-    def output_model(self):
-
-        # generate outputs
-        for n in range(1, self.num):
-            with open('barcodes_{}.csv'.format(n), 'w') as myfile:
-                for item in self.assigned[n-1]:
-                    myfile.write(str(item) + '\n')
-        self.P_s_c.to_csv('P_s_c.csv')
-        self.model_af.to_csv('model_af.csv')
-        print(self.sum_log_likelihood)
-        progress = 'scSplit finished at: ' + str(datetime.datetime.now()) + '\n'
-        with open('wip.log', 'a') as myfile: myfile.write(progress)
-
-
-    def run_EM(self):
-
-        # commencing E-M
-        iterations = 0
-        self.sum_log_likelihood = [1,2]  # dummy likelihood as a start
-        while self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]:
-            iterations += 1
-            progress = 'Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
-            with open('wip.log', 'a') as myfile: myfile.write(progress)
-            self.calculate_cell_likelihood()  # E-step, calculate the expected cell origin likelihood with a function of self.model_af (theta)
-            self.calculate_model_af()  # M-step, to optimise unknown model parameter self.model_af (theta)
-            # approximation due to python calculation limit
-            self.sum_log_likelihood.append(self.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], thus LL = Sum_c{log[Sum_s(P(c|s))]}
-            # self.sum_log_likelihood.append(((2**self.lP_c_s).sum(axis=1)+1e-323).apply(np.log2).sum())
-
-
 def main():
 
     num_models = 4          # number of models in each run
@@ -209,10 +197,21 @@ def main():
     progress = 'AF matrices uploaded: ' + str(datetime.datetime.now()) + '\n'
     with open('wip.log', 'a') as myfile: myfile.write(progress)
 
-    model = models(base_calls_mtx, num_models)  # model initialisation
-    model.run_EM()  # model training
-    model.assign_cells()    # assign cells to states
-    model.output_model()    # result output
+    max_likelihood = -1e10
+    for _ in range(100):
+        model = models(base_calls_mtx, num_models)  # model initialisation
+        model.run_EM()  # model training
+        model.assign_cells()    # assign cells to states
+        if model.sum_log_likelihood[-1] > max_likelihood:
+            max_likelihood = model.sum_log_likelihood[-1]
+            assigned = model.assigned
+
+    # generate outputs
+    for n in range(num_models+1):
+        with open('barcodes_{}.csv'.format(n), 'w') as myfile:
+            for item in assigned[n]:
+                myfile.write(str(item) + '\n')
+    print(max_likelihood)
 
 if __name__ == '__main__':
     main()

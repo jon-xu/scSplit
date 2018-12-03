@@ -163,20 +163,6 @@ class models:
             self.assigned[n] = sorted(self.P_s_c.loc[self.P_s_c[n] >= 0.9].index.values.tolist())
 
 
-    def output_model(self):
-
-        # generate outputs
-        for n in range(self.num):
-            with open('barcodes_{}.csv'.format(n), 'w') as myfile:
-                for item in self.assigned[n]:
-                    myfile.write(str(item) + '\n')
-        self.P_s_c.to_csv('P_s_c.csv')
-        self.model_af.to_csv('model_af.csv')
-        print(self.sum_log_likelihood)
-        progress = 'scSplit finished at: ' + str(datetime.datetime.now()) + '\n'
-        with open('wip.log', 'a') as myfile: myfile.write(progress)
-
-
 def main():
 
     num_models = 4          # number of models in each run
@@ -211,6 +197,7 @@ def main():
         with open('barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in assigned[n]:
                 myfile.write(str(item) + '\n')
+    print(max_likelihood)
 
 if __name__ == '__main__':
     main()
