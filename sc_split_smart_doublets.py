@@ -211,7 +211,7 @@ def main():
         with open('barcodes_{}.csv'.format(n+1), 'w') as myfile:
             for item in assigned[n]:
                 myfile.write(str(item) + '\n')
-    with open('wip.log', 'a') as myfile: myfile.write(str(max_likelihood))
+    with open('wip.log', 'a') as myfile: myfile.write(str(max_likelihood) + '\n')
 
 if __name__ == '__main__':
     main()
