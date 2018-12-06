@@ -55,16 +55,16 @@ class models:
         mrows = mcols = 0 
         # loop when non zero rows/columns haven't been 90% of the subset matrix:
         while (mrows < (0.9 * nrows)) or (mcols < (0.9 * ncols)):
-            rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows))*nrows))))    # random 10% bottom rows
-            rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols))*ncols))))    # random 10% bottom cols
-            rows = np.count_nonzero(base_mtx, axis=1).argsort().tolist()
-            cols = np.count_nonzero(base_mtx, axis=0).argsort().tolist()
+            rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows))*nrows))))    # id of random 10% bottom rows
+            rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols))*ncols))))    # id of random 10% bottom cols
+            rows = np.count_nonzero(base_mtx, axis=1).argsort().tolist()    # sorted row index according to non_zero counts across cols in the current matrix
+            cols = np.count_nonzero(base_mtx, axis=0).argsort().tolist()    # sorted col index according to non_zero counts across rows in the current matrix
             for item in rbrows:
-                rows.remove(item)
+                rows.remove(item)   # remove the randomly picked least non_zero rows
             for item in rbcols:
-                cols.remove(item)
-            irows = irows[rows]     # track the row index of original matrix
-            icols = icols[cols]     # track the col index of original matrix
+                cols.remove(item)   # remove the randomly picked least non_zero cols
+            irows = irows[rows]     # record the index of the remaining rows according to original matrix
+            icols = icols[cols]     # record the index of the remaining cols according to original matrix
             nrows = len(rows)
             ncols = len(cols)
             base_mtx = base_mtx[rows][:,cols]

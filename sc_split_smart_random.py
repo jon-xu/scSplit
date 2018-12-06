@@ -65,16 +65,16 @@ class models:
         ncols = len(cols)
         mrows = mcols = 0
         while (mrows < (0.9 * nrows)) or (mcols < (0.9 * ncols)):
-            rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows))*nrows))))    # random 10% bottom rows
-            rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols))*ncols))))    # random 10% bottom cols
-            rows = np.count_nonzero(base_mtx, axis=1).argsort().tolist()
-            cols = np.count_nonzero(base_mtx, axis=0).argsort().tolist()
+            rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows))*nrows))))    # id of random 10% bottom rows
+            rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols))*ncols))))    # id of random 10% bottom cols
+            rows = np.count_nonzero(base_mtx, axis=1).argsort().tolist()    # sorted row index according to non_zero counts across cols in the current matrix
+            cols = np.count_nonzero(base_mtx, axis=0).argsort().tolist()    # sorted col index according to non_zero counts across rows in the current matrix
             for item in rbrows:
-                rows.remove(item)
+                rows.remove(item)   # remove the randomly picked least non_zero rows
             for item in rbcols:
-                cols.remove(item)
-            irows = irows[rows]     # track the row index of original matrix
-            icols = icols[cols]     # track the col index of original matrix
+                cols.remove(item)   # remove the randomly picked least non_zero cols
+            irows = irows[rows]     # record the index of the remaining rows according to original matrix
+            icols = icols[cols]     # record the index of the remaining cols according to original matrix
             nrows = len(rows)
             ncols = len(cols)
             base_mtx = base_mtx[rows][:,cols]
@@ -87,8 +87,12 @@ class models:
         pca = PCA(n_components=10)
         pca_alt = pca.fit_transform(alt_pca)
         kmeans = KMeans(n_clusters=self.num-1, random_state=0).fit(pca_alt)
-
+        self.initial = []
         for n in range(self.num-1):
+            self.initial.append([])
+            for index in enumerate(icols):
+                if kmeans.labels_[index] == n:
+                    self.initial[n].append(self.barcodes[icols[index]])
             barcode_alt = np.array(self.alt_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
             barcode_ref = np.array(self.ref_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
             self.model_af.loc[:, n+1] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)       
@@ -190,12 +194,16 @@ def main():
         model.assign_cells()    # assign cells to states
         if model.sum_log_likelihood[-1] > max_likelihood:
             max_likelihood = model.sum_log_likelihood[-1]
+            initial = model.initial
             assigned = model.assigned
 
     # generate outputs
     for n in range(num_models+1):
         with open('barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in assigned[n]:
+                myfile.write(str(item) + '\n')
+        with open('initial_{}.csv'.format(n), 'w') as myfile:
+            for item in initial[n]:
                 myfile.write(str(item) + '\n')
     with open('wip.log', 'a') as myfile: myfile.write(str(max_likelihood) + '\n')
 
