@@ -5,7 +5,7 @@ Lachlan Coin
 Aug 2018
 """
 
-import pdb
+import pysam as ps
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
@@ -29,7 +29,6 @@ class models:
              lP_c_s(DataFrame): barcode/sample matrix containing the log likelihood of seeing barcode c under sample s, whose sum should increase by each iteration
              assigned(list): final lists of cell/barcode assigned to each cluster/model
              model_af(list): list of num model allele frequencies based on P(A)
-
         """
         self.ref_bc_mtx = base_calls_mtx[0]
         self.alt_bc_mtx = base_calls_mtx[1]
@@ -83,6 +82,8 @@ class models:
         pca = PCA(n_components=20)
         pca_alt = pca.fit_transform(alt_pca)
         kmeans = KMeans(n_clusters=self.num, random_state=0).fit(pca_alt)
+
+        # intialise allele frequency for model states
         self.initial = []
         for n in range(self.num):
             self.initial.append([])
@@ -102,7 +103,7 @@ class models:
         while self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]:
             iterations += 1
             progress = 'Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
-            with open('wip.log', 'a') as myfile: myfile.write(progress)
+            with open('sc_split.log', 'a') as myfile: myfile.write(progress)
             self.calculate_cell_likelihood()  # E-step, calculate the expected cell origin likelihood with a function of self.model_af (theta)
             self.calculate_model_af()  # M-step, to optimise unknown model parameter self.model_af (theta)
             # approximation due to python calculation limit
@@ -117,7 +118,6 @@ class models:
         log(P(c|s)) = sum_v{(N(A)_c,v*log(P(g_A|s)) + N(R)_c,v*log(1-P(g_A|s)))}
         P(s_n|c) = P(c|s_n) / [P(c|s_1) + P(c|s_2) + ... + P(c|s_n)]
         log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
-
         """
 
         # calculate likelihood P(c|s) based on allele probability
@@ -137,7 +137,6 @@ class models:
     def calculate_model_af(self):
         """
         Update the model allele fraction by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
-
         """
 
         N_ref = self.ref_bc_mtx.sum(axis=1) + self.pseudo
@@ -151,11 +150,28 @@ class models:
     def assign_cells(self):
         """
             Final assignment of cells according to P(s|c) >= 0.9
-
-            """
+        """
 
         for n in range(self.num):
             self.assigned[n] = sorted(self.P_s_c.loc[self.P_s_c[n] >= 0.9].index.values.tolist())
+
+
+    def define_doublet(self):
+        """
+            Locate the doublet state
+        """
+
+        raw_reads = [0] * self.num
+        in_sam = ps.AlignmentFile('scFibroblast_GWAS_Pool1_V1.bam', 'rb')
+        for read in in_sam:
+            if read.flag < 256:   # only valid reads
+                try:
+                    barcode = read.get_tag('CB')
+                except:
+                    barcode = ''
+                if barcode != '':
+                    raw_reads[[(ind) for ind in range(len(self.assigned)) if barcode in self.assigned[ind]][0]] += 1
+        self.doublet = raw_reads.index(max(raw_reads))
 
 
 def main():
@@ -167,7 +183,7 @@ def main():
     alt_csv = 'alt_filtered.csv'  # alternative matrix
 
     progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
-    with open('wip.log', 'a') as myfile: myfile.write(progress)
+    with open('sc_split.log', 'a') as myfile: myfile.write(progress)
 
     # Read in existing matrix from the csv files
     ref = pd.read_csv(ref_csv, header=0, index_col=0)  # read ref matrix with header line and column
@@ -176,10 +192,11 @@ def main():
     alt_s = csr_matrix(alt.values)
     base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
     progress = 'AF matrices uploaded: ' + str(datetime.datetime.now()) + '\n'
-    with open('wip.log', 'a') as myfile: myfile.write(progress)
+    with open('sc_split.log', 'a') as myfile: myfile.write(progress)
 
     max_likelihood = -1e10
-    for _ in range(100):
+    for i in range(50):
+        with open('sc_split.log', 'a') as myfile: myfile.write('round ' + str(i) + '\n')
         model = models(base_calls_mtx, num_models)  # model initialisation
         model.run_EM()  # model training
         model.assign_cells()    # assign cells to states
@@ -187,16 +204,20 @@ def main():
             max_likelihood = model.sum_log_likelihood[-1]
             initial = model.initial
             assigned = model.assigned
+    model.assigned = assigned
+    model.initial = initial
+    model.define_doublet()    # find the doublet state
+
 
     # generate outputs
     for n in range(num_models+1):
         with open('barcodes_{}.csv'.format(n), 'w') as myfile:
-            for item in assigned[n]:
+            for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
         with open('initial_{}.csv'.format(n), 'w') as myfile:
-            for item in initial[n-1]:
+            for item in model.initial[n-1]:
                 myfile.write(str(item) + '\n')
-    with open('wip.log', 'a') as myfile: myfile.write(str(max_likelihood) + '\n')
+    with open('sc_split.log', 'a') as myfile: myfile.write('doublet: ' + str(model.doublet) + '\n' + 'ML: ' + str(max_likelihood) + '\n')
 
 if __name__ == '__main__':
     main()
