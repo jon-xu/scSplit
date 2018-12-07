@@ -5,7 +5,6 @@ Lachlan Coin
 Aug 2018
 """
 
-import pysam as ps
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
