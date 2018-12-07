@@ -28,7 +28,7 @@ class models:
              P_s_c(DataFrame): barcode/sample matrix containing the probability of seeing sample s with observation of barcode c
              lP_c_s(DataFrame): barcode/sample matrix containing the log likelihood of seeing barcode c under sample s, whose sum should increase by each iteration
              assigned(list): final lists of cell/barcode assigned to each cluster/model
-             model_af(list): list of num model allele frequencies based on P(A)
+             model_af(Dataframe): Dataframe of model allele frequencies P(A) for each SNV and state
         """
         self.ref_bc_mtx = base_calls_mtx[0]
         self.alt_bc_mtx = base_calls_mtx[1]
@@ -161,17 +161,20 @@ class models:
             Locate the doublet state
         """
 
-        raw_reads = [0] * self.num
-        in_sam = ps.AlignmentFile('scFibroblast_GWAS_Pool1_V1.bam', 'rb')
-        for read in in_sam:
-            if read.flag < 256:   # only valid reads
-                try:
-                    barcode = read.get_tag('CB')
-                except:
-                    barcode = ''
-                if barcode != '':
-                    raw_reads[[(ind) for ind in range(len(self.assigned)) if barcode in self.assigned[ind]][0]] += 1
-        self.doublet = raw_reads.index(max(raw_reads))
+        max_avg_entropy = 0
+        for n in range(self.num):
+            index = []
+            # transform barcode assignments to indices
+            for item in self.assigned[n]:
+                index.append(self.barcodes.index(item))
+            # locate informative SNVs for the state
+            reads = (self.alt_bc_mtx + self.ref_bc_mtx)[:, index].sum(axis=1)
+            subset = self.model_af[reads > 10][n]
+            entropy = -subset * np.log2(subset + 1e-20) - (1 - subset) * np.log2(1 - subset + 1e-20)
+            avg_entropy = np.average(entropy)
+            if avg_entropy > max_avg_entropy:
+                self.doublet = n
+                max_avg_entropy = avg_entropy
 
 
 def main():
