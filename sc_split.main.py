@@ -5,8 +5,11 @@ Lachlan Coin
 Aug 2018
 """
 
+import pickle
+import pdb
 import numpy as np
 import pandas as pd
+import statistics as stat
 from scipy.sparse import csr_matrix
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
@@ -159,21 +162,18 @@ class models:
         """
             Locate the doublet state
         """
-
-        max_avg_entropy = 0
-        for n in range(self.num):
-            index = []
-            # transform barcode assignments to indices
-            for item in self.assigned[n]:
-                index.append(self.barcodes.index(item))
-            # locate informative SNVs for the state
-            reads = (self.alt_bc_mtx + self.ref_bc_mtx)[:, index].sum(axis=1)
-            subset = self.model_af[reads > 10][n]
-            entropy = -subset * np.log2(subset + 1e-20) - (1 - subset) * np.log2(1 - subset + 1e-20)
-            avg_entropy = np.average(entropy)
-            if avg_entropy > max_avg_entropy:
-                self.doublet = n
-                max_avg_entropy = avg_entropy
+        cross_state = pd.DataFrame(0, index = range(self.num), columns = range(self.num))
+        for i in range(self.num):       # target state
+            for j in range(self.num):   # barcode assigned state
+                index = []
+                # transform barcode assignments to indices
+                for item in self.assigned[j]:
+                    index.append(self.barcodes.index(item))
+                matcalc = self.alt_bc_mtx.T.multiply(self.model_af.loc[:, i].apply(np.log2)).T \
+                        + self.ref_bc_mtx.T.multiply((1 - self.model_af.loc[:, i]).apply(np.log2)).T
+                cross_state.loc[j, i] = matcalc[:, index].sum()
+        result = cross_state.sum(axis=0).tolist()
+        self.doublet = result.index(max(result))
 
 
 def main():
@@ -197,7 +197,7 @@ def main():
     with open('sc_split.log', 'a') as myfile: myfile.write(progress)
 
     max_likelihood = -1e10
-    for i in range(50):
+    for i in range(100):
         with open('sc_split.log', 'a') as myfile: myfile.write('round ' + str(i) + '\n')
         model = models(base_calls_mtx, num_models)  # model initialisation
         model.run_EM()  # model training
@@ -206,12 +206,15 @@ def main():
             max_likelihood = model.sum_log_likelihood[-1]
             initial = model.initial
             assigned = model.assigned
+            af = model.model_af
     model.assigned = assigned
     model.initial = initial
-    model.define_doublet()    # find the doublet state
-
+    model.model_af = af
+    model.define_doublet()  # find the doublet state
 
     # generate outputs
+    with open('model.found', 'wb') as f:
+        pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
     for n in range(num_models+1):
         with open('barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
@@ -223,3 +226,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
