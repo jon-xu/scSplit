@@ -197,7 +197,7 @@ def main():
     with open('sc_split.log', 'a') as myfile: myfile.write(progress)
 
     max_likelihood = -1e10
-    for i in range(100):
+    for i in range(50):
         with open('sc_split.log', 'a') as myfile: myfile.write('round ' + str(i) + '\n')
         model = models(base_calls_mtx, num_models)  # model initialisation
         model.run_EM()  # model training
