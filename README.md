@@ -2,6 +2,8 @@
 ### Genotype-free demultiplexing of pooled single-cell RNAseq, using a hidden state model for identifying genetically distinct samples within a mixed population.  It has been used to demultiplex up to 8 samples on 10X platform.
 
 ### How to install:
+    install python 3.6
+    make sure necessary python packages are installed: numpy, pandas, statistics, scipy, sklearn, pickle
     git clone https://github.com/jon-xu/sc_split
     copy the BAM file (barcodes marked with CB:Z: tag) into the same folder of toolset scripts
 
