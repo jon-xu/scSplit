@@ -1,5 +1,5 @@
 """
-Simulate SNV/Barcode Matrices (ref/alt) for genotype-free demultiplexing on pooled scRNA-seq Jon Xu Lachlan Coin Aug 2018 jun.xu@uq.edu.au 
+Simulate SNV/Barcode Matrices (ref/alt) for genotype-free demultiplexing on pooled scRNA-seq 
 Jon Xu (jun.xu@uq.edu.au)
 Lachlan Coin
 Aug 2018
