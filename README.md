@@ -3,15 +3,15 @@
 #### It has been used to demultiplex up to 8 samples on 10X platform.
 
 ### How to install:
-    install python 3.6
-    make sure necessary python packages are installed: numpy, math, pandas, pickle, pysam, random, scipy, sklearn, statistics, vcf
-    git clone https://github.com/jon-xu/sc_split
-    copy the BAM file (barcodes marked with CB:Z: tag) into the same folder of toolset scripts
+    1) install python 3.6
+    2) make sure necessary python packages are installed: numpy, math, pandas, pickle, pysam, random, scipy, 
+    sklearn, statistics, vcf
+    3) git clone https://github.com/jon-xu/sc_split
 
 ### How to run the toolset:
 
 ##### 1. Data quality control and filtering
-   *a) process BAM file from scRNA-Seq in a way that reads with any of following patterns be filtered out: quality is lower than 10,  is unmapped segment, is secondary alignment, not passing filters, is PCR or optical duplicate, or is supplementary alignment.*
+   *a) copy target BAM file (barcodes marked with CB:Z: tag) into the same folder of scSplit, process BAM file from scRNA-Seq in a way that reads with any of following patterns be filtered out: quality is lower than 10,  is unmapped segment, is secondary alignment, not passing filters, is PCR or optical duplicate, or is supplementary alignment.*
    
    *b) from the processed BAM file, keep only the reads with white listed barcodes to reduce technical noises.*
    
