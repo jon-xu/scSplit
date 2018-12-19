@@ -1,2 +1,2 @@
 # sc_split
-Genotype-free demultiplexing of pooled single-cell RNAseq, using a machine learning approach
+Genotype-free demultiplexing of pooled single-cell RNAseq, using maximum likelihood approach based on hidden state model.
