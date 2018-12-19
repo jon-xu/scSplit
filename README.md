@@ -38,5 +38,6 @@
    
    *b) VCF file ("sc_split.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.*
 
-
+<br/>
+<br/>
 ![alt text](https://github.com/jon-xu/sc_split/blob/master/man/figure1_pipeline.png)
