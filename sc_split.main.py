@@ -176,15 +176,6 @@ class models:
         self.doublet = result.index(max(result))
 
 
-    def assign_cells(self):
-        """
-            Final assignment of cells according to P(s|c) >= 0.9
-        """
-
-        for n in range(self.num):
-            self.assigned[n] = sorted(self.P_s_c.loc[self.P_s_c[n] >= 0.9].index.values.tolist())
-
-
 def main():
 
     num_models = 7          # number of models in each run
