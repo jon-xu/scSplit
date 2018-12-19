@@ -5,8 +5,6 @@ Lachlan Coin
 Aug 2018
 """
 
-import pickle
-import pdb
 import numpy as np
 import pandas as pd
 import statistics as stat
@@ -15,6 +13,7 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import datetime
+import pickle
 import csv
 
 class models:
