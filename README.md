@@ -5,8 +5,8 @@
 
 ##### 1. Data quality control and filtering
    *a) process BAM file from scRNA-Seq in a way that reads with any of following patterns be filtered out: quality is lower than 10,  is unmapped segment, is secondary alignment, not passing filters, is PCR or optical duplicate, or is supplementary alignment.*
-   b) from the processed BAM file, keep only the reads with white listed barcodes to reduce technical noises.  
-   c) Mark BAM file for duplication, and get it sorted and indexed.
+   *b) from the processed BAM file, keep only the reads with white listed barcodes to reduce technical noises.*
+   *c) Mark BAM file for duplication, and get it sorted and indexed.*
    
 ##### 2. Calling for single-nucleotide variants
    a) use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1.  
