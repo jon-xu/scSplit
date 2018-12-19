@@ -37,3 +37,5 @@
    *a) run python script "sc_split_vcf.py"*
    
    *b) VCF file ("sc_split.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.*
+
+![alt text](https://raw.githubusercontent.com/username/projectname/branch/path/to/img.png)
