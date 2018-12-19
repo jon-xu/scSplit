@@ -4,7 +4,7 @@
 
 ### How to install:
     install python 3.6
-    make sure necessary python packages are installed: numpy, pandas, statistics, scipy, sklearn, pickle
+    make sure necessary python packages are installed: numpy, math, pysam, pandas, statistics, scipy, sklearn, pickle
     git clone https://github.com/jon-xu/sc_split
     copy the BAM file (barcodes marked with CB:Z: tag) into the same folder of toolset scripts
 
