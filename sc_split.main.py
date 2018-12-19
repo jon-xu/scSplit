@@ -176,6 +176,15 @@ class models:
         self.doublet = result.index(max(result))
 
 
+    def assign_cells(self):
+        """
+            Final assignment of cells according to P(s|c) >= 0.9
+        """
+
+        for n in range(self.num):
+            self.assigned[n] = sorted(self.P_s_c.loc[self.P_s_c[n] >= 0.9].index.values.tolist())
+
+
 def main():
 
     num_models = 7          # number of models in each run
@@ -213,14 +222,11 @@ def main():
     model.define_doublet()  # find the doublet state
 
     # generate outputs
-    with open('model.found', 'wb') as f:
+    with open('model.final', 'wb') as f:
         pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
     for n in range(num_models+1):
         with open('barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
-                myfile.write(str(item) + '\n')
-        with open('initial_{}.csv'.format(n), 'w') as myfile:
-            for item in model.initial[n-1]:
                 myfile.write(str(item) + '\n')
     with open('sc_split.log', 'a') as myfile: myfile.write('doublet: ' + str(model.doublet) + '\n' + 'ML: ' + str(max_likelihood) + '\n')
 
