@@ -4,7 +4,7 @@
 ### General pipeline:
 
 ##### 1. Data quality control and filtering
-   #a) process BAM file from scRNA-Seq in a way that reads with any of following patterns be filtered out: quality is lower than 10,  is unmapped segment, is secondary alignment, not passing filters, is PCR or optical duplicate, or is supplementary alignment.#
+   **a) process BAM file from scRNA-Seq in a way that reads with any of following patterns be filtered out: quality is lower than 10,  is unmapped segment, is secondary alignment, not passing filters, is PCR or optical duplicate, or is supplementary alignment.**
    
    *b) from the processed BAM file, keep only the reads with white listed barcodes to reduce technical noises.*
    
