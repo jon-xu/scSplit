@@ -109,7 +109,6 @@ class models:
             self.calculate_model_af()  # M-step, to optimise unknown model parameter self.model_af (theta)
             # approximation due to python calculation limit
             self.sum_log_likelihood.append(self.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], thus LL = Sum_c{log[Sum_s(P(c|s))]}
-            # self.sum_log_likelihood.append(((2**self.lP_c_s).sum(axis=1)+1e-323).apply(np.log2).sum())
 
 
     def calculate_cell_likelihood(self):
