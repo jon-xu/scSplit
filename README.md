@@ -10,14 +10,14 @@
 ### How to run the toolset:
 
 ##### 1. Data quality control and filtering
-   *a) copy target BAM file (barcodes marked with CB:Z: tag) into the same folder of scSplit, process BAM file from scRNA-Seq in a way that reads with any of following patterns be filtered out: quality is lower than 10,  is unmapped segment, is secondary alignment, not passing filters, is PCR or optical duplicate, or is supplementary alignment.*
+   *a) Copy target BAM file (barcodes marked with CB:Z: tag) into the same folder of scSplit, keep only the reads with white listed barcodes to reduce technical noises.*
    
-   *b) from the processed BAM file, keep only the reads with white listed barcodes to reduce technical noises.*
+   *b) Process BAM file from scRNA-Seq in a way that reads with any of following patterns be filtered out: quality is lower than 10,  is unmapped segment, is secondary alignment, not passing filters, is PCR or optical duplicate, or is supplementary alignment. Example: samtools view -S -b -q 10 -F 3844 <original.bam> > <target.bam>*
    
-   *c) Mark BAM file for duplication, and get it sorted and indexed.*
+   *c) Mark BAM file for duplication, and get it sorted and indexed, using rmdup, sort, index commands in samtools*
    
 ##### 2. Calling for single-nucleotide variants
-   *a) use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1.*
+   *a) use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1. Example: freebayes -f <reference.fa> -iXu -C *
    
    *b) The output VCF file will be futher filtered so that only the SNVs with quality score larger than 30 would be kept.*
 
