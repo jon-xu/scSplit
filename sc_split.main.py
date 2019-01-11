@@ -23,6 +23,8 @@ class models:
 
         Parameters:
              base_calls_mtx(list of Dataframes): SNV-barcode matrix containing lists of base calls
+             ref_bc_mtx: SNV-barcode matrix for reference allele counts
+             alt_bc_mtx: SNV-barcode matrix for alternative allele counts
              all_POS(list): list of SNVs positions
              barcodes(list): list of cell barcodes
              num(int): number of total samples
@@ -63,19 +65,17 @@ class models:
         while (mrows < (0.9 * nrows)) or (mcols < (0.9 * ncols)):
             rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows))*nrows))))    # id of random 10% bottom rows
             rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols))*ncols))))    # id of random 10% bottom cols
-            rows = np.count_nonzero(base_mtx, axis=1).argsort().tolist()    # sorted row index according to non_zero counts across cols in the current matrix
-            cols = np.count_nonzero(base_mtx, axis=0).argsort().tolist()    # sorted col index according to non_zero counts across rows in the current matrix
-            for item in rbrows:
-                rows.remove(item)   # remove the randomly picked least non_zero rows
-            for item in rbcols:
-                cols.remove(item)   # remove the randomly picked least non_zero cols
+            rows = np.count_nonzero(base_mtx, axis=1).argsort().tolist()    # pointer of the rows sorted by non_zero counts across cols
+            cols = np.count_nonzero(base_mtx, axis=0).argsort().tolist()    # pointer of the cols sorted by non_zero counts across rows
+            rows = [item for index, item in enumerate(rows) if index not in rbrows]     # remove the randomly picked least non_zero rows
+            cols = [item for index, item in enumerate(cols) if index not in rbcols]     # remove the randomly picked least non_zero cols
             irows = irows[rows]     # record the index of the remaining rows according to original matrix
             icols = icols[cols]     # record the index of the remaining cols according to original matrix
             nrows = len(rows)
             ncols = len(cols)
             base_mtx = base_mtx[rows][:,cols]
-            mrows = min(np.count_nonzero(base_mtx, axis=0))     # minimum non-zero rows in all cols
-            mcols = min(np.count_nonzero(base_mtx, axis=1))     # minimum non-zero cols in all rows
+            mrows = min(np.count_nonzero(base_mtx, axis=0))     # minimum non-zero number of rows (axis=0) among all cols
+            mcols = min(np.count_nonzero(base_mtx, axis=1))     # minimum non-zero number of cols (axis=1) among all rows
         alt_subset = self.alt_bc_mtx[irows][:, icols].todense()
         ref_subset = self.ref_bc_mtx[irows][:, icols].todense()
         alt_prop = (alt_subset + 0.01) / (alt_subset + ref_subset + 0.02)
