@@ -126,7 +126,7 @@ class models:
                     + self.ref_bc_mtx.T.multiply((1 - self.model_af.loc[:, n]).apply(np.log2)).T
             self.lP_c_s.loc[:, n] = matcalc.sum(axis=0).tolist()[0]  # log likelihood to avoid python computation limit of 1e-323/1e+308
 
-        # transform to cell sample probability using Baysian rule
+        # transform to cell sample probability P(s|c) using Baysian rule
         for i in range(self.num):
             denom = 0
             for j in range(self.num):
