@@ -83,7 +83,7 @@ class models:
         pca = PCA(n_components=20)
         pca_alt = pca.fit_transform(alt_pca)
         kmeans = KMeans(n_clusters=self.num, random_state=0).fit(pca_alt)
-
+    
         # intialise allele frequency for model states
         self.initial = []
         for n in range(self.num):
@@ -174,6 +174,33 @@ class models:
         self.doublet = result.index(max(result))
 
 
+    def distinguishing_alleles(self):
+        """
+            Locate the distinguishing alleles
+            N_ref_mtx, N_alt_mtx: SNV-state matrix for ref/alt counts in each state
+        """
+        # build SNV-state matrices for ref and alt counts
+        thresh1 = 5 # threshold for alternative alleles 
+        thresh2 = thresh1 * (self.num - 1) * 2  # threshold for reference alleles
+        N_ref_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
+        N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
+        result = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
+        for n in range(self.num):
+            bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]
+            N_ref_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1)    # count ref alleles counts from cells assigned to state n
+            N_alt_mtx.loc[:, n] = self.alt_bc_mtx[:, bc_idx].sum(axis=1)    # count alt alleles counts from cells assigned to state n
+
+
+        # detect special alleles for each state
+        for n in range(self.num):
+            # [N(A|S_n) > thresh1] & [N(A|S_other) == 0] & [N(R|S_other) > thresh2]
+            result.loc[:, n] = (N_alt_mtx.loc[:, n].values > thresh1) & \
+                ((np.squeeze(np.asarray(self.alt_bc_mtx.sum(axis=1))) - N_alt_mtx.loc[:, n].values) == 0) & \
+                ((np.squeeze(np.asarray(self.ref_bc_mtx.sum(axis=1))) - N_ref_mtx.loc[:, n].values) > thresh2)
+        
+        self.dist_alleles =  result.loc[result.sum(axis=1)>0].index
+
+
 def main():
 
     num_models = 7          # number of models in each run
@@ -205,10 +232,13 @@ def main():
             initial = model.initial
             assigned = model.assigned
             af = model.model_af
+            p_s_c = model.P_s_c
     model.assigned = assigned
     model.initial = initial
     model.model_af = af
+    model.P_s_c = p_s_c
     model.define_doublet()  # find the doublet state
+    model.distinguishing_alleles()  # find the distinguishing alleles
 
     # generate outputs
     with open('model.final', 'wb') as f:
@@ -217,7 +247,12 @@ def main():
         with open('barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
-    with open('sc_split.log', 'a') as myfile: myfile.write('doublet: ' + str(model.doublet) + '\n' + 'ML: ' + str(max_likelihood) + '\n')
+    model.P_s_c.to_csv('P_s_c.csv')
+    with open('dist_alleles.txt', 'w') as myfile:
+        for item in model.dist_alleles:
+            myfile.write(str(item) + '\n')
+    with open('sc_split.log', 'a') as myfile:
+        myfile.write('doublet: ' + str(model.doublet) + '\n' + 'ML: ' + str(max_likelihood) + '\n')
 
 if __name__ == '__main__':
     main()
