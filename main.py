@@ -15,7 +15,6 @@ from sklearn.preprocessing import StandardScaler
 import datetime
 import pickle
 import csv
-import vcf
 
 class models:
     def __init__(self, base_calls_mtx, num):
@@ -199,22 +198,8 @@ class models:
                 ((np.squeeze(np.asarray(self.alt_bc_mtx.sum(axis=1))) - N_alt_mtx.loc[:, n].values) == 0) & \
                 ((np.squeeze(np.asarray(self.ref_bc_mtx.sum(axis=1))) - N_ref_mtx.loc[:, n].values) > thresh2)
         
-        alleles =  result.loc[result.sum(axis=1) > 0].index
+        self.dist_alleles =  result.loc[result.sum(axis=1)>0].index
 
-        # check whether there's unique genotyped cluster using reference vcf
-        self.dist_alleles = {}
-        for item in alleles:
-            for record in vcf.Reader(open(ref_vcf, 'r')):
-                if str(record.CHROM) == item.split(':')[0]:
-                    if str(record.POS) == item.split(':')[1]:
-                        count = {0:0, 1:0, 2:0}
-                        for sample in record.samples:
-                            count[np.argmax(sample['GP'])] += 1
-                        if 1 in count.values():
-                            self.dist_alleles[item] = 'unique genotype exists'
-                        else:
-                            self.dist_alleles[item] = 'unique genotype does NOT exist'
-                        break  
 
 def main():
 
@@ -223,7 +208,6 @@ def main():
     # input and output files
     ref_csv = 'ref_filtered.csv'  # reference matrix
     alt_csv = 'alt_filtered.csv'  # alternative matrix
-    ref_vcf = 'imputed.vcf'       # reference vcf for validation
 
     progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
     with open('sc_split.log', 'a') as myfile: myfile.write(progress)
@@ -266,7 +250,7 @@ def main():
     model.P_s_c.to_csv('P_s_c.csv')
     with open('dist_alleles.txt', 'w') as myfile:
         for item in model.dist_alleles:
-            myfile.write(str(item) + '\t' + model.dist_alleles[item] + '\n')    
+            myfile.write(str(item) + '\n')
     with open('doublet.txt', 'w') as myfile:
         myfile.write('Cluster ' + str(model.doublet) + ' is doublet.\n')
     with open('sc_split.log', 'a') as myfile:
