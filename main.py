@@ -33,10 +33,8 @@ class models:
              assigned(list): final lists of cell/barcode assigned to each cluster/model
              model_af(Dataframe): Dataframe of model allele frequencies P(A) for each SNV and state
         """
-        self.ref_bc_mtx = base_calls_mtx[0]
-        self.alt_bc_mtx = base_calls_mtx[1]
-        self.all_POS = base_calls_mtx[2].tolist()
-        self.barcodes = base_calls_mtx[3].tolist()
+        self.ref_bc_mtx, self.alt_bc_mtx = base_calls_mtx[0], base_calls_mtx[1]
+        self.all_POS, self.barcodes = base_calls_mtx[2].tolist(), base_calls_mtx[3].tolist()
         self.num = num + 1  # including an additional background state for doublets
         self.P_s_c = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
@@ -50,17 +48,13 @@ class models:
         N_A = self.alt_bc_mtx.sum(axis=1) + self.pseudo
         N_R = self.ref_bc_mtx.sum(axis=1) + self.pseudo
         N_T = N_A + N_R
-        k_ref = N_R / N_T
-        k_alt = N_A / N_T
+        k_ref,  k_alt = N_R / N_T, N_A / N_T
 
         # find barcodes for state initialisation, using subsetting/PCA/K-mean
         base_mtx = (self.alt_bc_mtx + self.ref_bc_mtx).toarray()
-        rows = [*range(base_mtx.shape[0])]
-        cols = [*range(base_mtx.shape[1])]
-        irows = np.array(rows)
-        icols = np.array(cols)
-        nrows = len(rows)
-        ncols = len(cols)
+        rows, cols = [*range(base_mtx.shape[0])], [*range(base_mtx.shape[1])]
+        irows, icols = np.array(rows), np.array(cols)
+        nrows, ncols = len(rows), len(cols)
         mrows = mcols = 0
         while (mrows < (0.9 * nrows)) or (mcols < (0.9 * ncols)):
             rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows))*nrows))))    # id of random 10% bottom rows
@@ -69,10 +63,8 @@ class models:
             cols = np.count_nonzero(base_mtx, axis=0).argsort().tolist()    # pointer of the cols sorted by non_zero counts across rows
             rows = [item for index, item in enumerate(rows) if index not in rbrows]     # remove the randomly picked least non_zero rows
             cols = [item for index, item in enumerate(cols) if index not in rbcols]     # remove the randomly picked least non_zero cols
-            irows = irows[rows]     # record the index of the remaining rows according to original matrix
-            icols = icols[cols]     # record the index of the remaining cols according to original matrix
-            nrows = len(rows)
-            ncols = len(cols)
+            irows, icols = irows[rows], icols[cols]    # record the index of the remaining rows/cols according to original matrix
+            nrows, ncols = len(rows), len(cols)
             base_mtx = base_mtx[rows][:,cols]
             mrows = min(np.count_nonzero(base_mtx, axis=0))     # minimum non-zero number of rows (axis=0) among all cols
             mcols = min(np.count_nonzero(base_mtx, axis=1))     # minimum non-zero number of cols (axis=1) among all rows
@@ -141,8 +133,7 @@ class models:
 
         N_ref = self.ref_bc_mtx.sum(axis=1) + self.pseudo
         N_alt = self.alt_bc_mtx.sum(axis=1) + self.pseudo
-        k_ref = N_ref / (N_ref + N_alt)
-        k_alt = N_alt / (N_ref + N_alt)
+        k_ref, k_alt = N_ref / (N_ref + N_alt), N_alt / (N_ref + N_alt)
         self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + k_ref + k_alt),
                                         index = self.all_POS, columns = range(self.num))
 
@@ -180,8 +171,8 @@ class models:
             N_ref_mtx, N_alt_mtx: SNV-state matrix for ref/alt counts in each state
         """
         # build SNV-state matrices for ref and alt counts
-        thresh1 = 5 # threshold for alternative alleles 
-        thresh2 = thresh1 * (self.num - 1) * 2  # threshold for reference alleles
+        thresh1 = 5     # threshold for ALT alleles
+        thresh2 = thresh1 * (self.num - 1) * 2  # threshold for REF alleles 
         N_ref_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         result = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
@@ -198,7 +189,7 @@ class models:
                 ((np.squeeze(np.asarray(self.alt_bc_mtx.sum(axis=1))) - N_alt_mtx.loc[:, n].values) == 0) & \
                 ((np.squeeze(np.asarray(self.ref_bc_mtx.sum(axis=1))) - N_ref_mtx.loc[:, n].values) > thresh2)
         
-        self.dist_alleles =  result.loc[result.sum(axis=1)>0].index
+        self.dist_alleles =  result.loc[result.sum(axis=1) > 0].index
 
 
 def main():
@@ -206,8 +197,7 @@ def main():
     num_models = 7          # number of models in each run
 
     # input and output files
-    ref_csv = 'ref_filtered.csv'  # reference matrix
-    alt_csv = 'alt_filtered.csv'  # alternative matrix
+    ref_csv, alt_csv = 'ref_filtered.csv', 'alt_filtered.csv'  # reference and alternative matrices
 
     progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
     with open('sc_split.log', 'a') as myfile: myfile.write(progress)
@@ -215,8 +205,7 @@ def main():
     # Read in existing matrix from the csv files
     ref = pd.read_csv(ref_csv, header=0, index_col=0)  # read ref matrix with header line and column
     alt = pd.read_csv(alt_csv, header=0, index_col=0)  # read alt matrix with header line and column
-    ref_s = csr_matrix(ref.values)
-    alt_s = csr_matrix(alt.values)
+    ref_s, alt_s = csr_matrix(ref.values), csr_matrix(alt.values)
     base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
     progress = 'AF matrices uploaded: ' + str(datetime.datetime.now()) + '\n'
     with open('sc_split.log', 'a') as myfile: myfile.write(progress)
@@ -229,14 +218,8 @@ def main():
         model.assign_cells()    # assign cells to states
         if model.sum_log_likelihood[-1] > max_likelihood:
             max_likelihood = model.sum_log_likelihood[-1]
-            initial = model.initial
-            assigned = model.assigned
-            af = model.model_af
-            p_s_c = model.P_s_c
-    model.assigned = assigned
-    model.initial = initial
-    model.model_af = af
-    model.P_s_c = p_s_c
+            initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
+    model.assigned, model.initial, model.model_af, model.P_s_c = assigned, intiial, af, p_s_c
     model.define_doublet()  # find the doublet state
     model.distinguishing_alleles()  # find the distinguishing alleles
 
