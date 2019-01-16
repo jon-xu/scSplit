@@ -219,7 +219,7 @@ def main():
         if model.sum_log_likelihood[-1] > max_likelihood:
             max_likelihood = model.sum_log_likelihood[-1]
             initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
-    model.assigned, model.initial, model.model_af, model.P_s_c = assigned, intiial, af, p_s_c
+    model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
     model.define_doublet()  # find the doublet state
     model.distinguishing_alleles()  # find the distinguishing alleles
 
