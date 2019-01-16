@@ -222,7 +222,7 @@ def main():
     with open('sc_split.log', 'a') as myfile: myfile.write(progress)
 
     max_likelihood = -1e10
-    for i in range(50):
+    for i in range(30):
         with open('sc_split.log', 'a') as myfile: myfile.write('round ' + str(i) + '\n')
         model = models(base_calls_mtx, num_models)  # model initialisation
         model.run_EM()  # model training
@@ -251,6 +251,8 @@ def main():
     with open('dist_alleles.txt', 'w') as myfile:
         for item in model.dist_alleles:
             myfile.write(str(item) + '\n')
+    with open('doublet.txt', 'w') as myfile:
+        myfile.write('Cluster ' + str(model.doublet) + ' is doublet.\n')
     with open('sc_split.log', 'a') as myfile:
         myfile.write('doublet: ' + str(model.doublet) + '\n' + 'ML: ' + str(max_likelihood) + '\n')
 
