@@ -47,7 +47,7 @@ def main():
                         if clusters.count(cluster) < counts:
                             counts, uniq = clusters.count(cluster), clusters.index(cluster)
                     with open(out_file, 'a') as myfile:
-                        if clusters.count(uniq) == 1:
+                        if clusters.count(clusters[uniq]) == 1:
                             myfile.write(str(item) + ' is unique allele for cluster ' + str(uniq) + '\n')
                         else: myfile.write(str(item) + ' is NOT a unique allele\n')
                     break
