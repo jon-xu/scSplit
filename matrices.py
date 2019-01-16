@@ -73,8 +73,8 @@ def build_base_calls_matrix(file_s, all_SNVs, barcodes):
 def main():
 
     # Input and output files
-    file_v = 'mixed.vcf'
-    file_s = 'mixed.bam'
+    file_v = 'mixed.vcf'    # vcf called from mixed bam
+    file_s = 'mixed.bam'    # BAM file of mixed samples
     file_b = 'barcodes.tsv'   # known and checked barcodes
     out_csv_ref = 'ref_filtered.csv'
     out_csv_alt = 'alt_filtered.csv'
