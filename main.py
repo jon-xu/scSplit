@@ -172,24 +172,37 @@ class models:
         """
         # build SNV-state matrices for ref and alt counts
         thresh1 = 5     # threshold for ALT alleles
-        thresh2 = thresh1 * (self.num - 1) * 2  # threshold for REF alleles 
+        thresh2 = thresh1 * 2  # threshold for REF alleles 
         N_ref_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         result = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         for n in range(self.num):
             bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]
-            N_ref_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1)    # count ref alleles counts from cells assigned to state n
-            N_alt_mtx.loc[:, n] = self.alt_bc_mtx[:, bc_idx].sum(axis=1)    # count alt alleles counts from cells assigned to state n
-
+            N_ref_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1)    # REF alleles counts from cells assigned to state n
+            N_alt_mtx.loc[:, n] = self.alt_bc_mtx[:, bc_idx].sum(axis=1)    # ALT alleles counts from cells assigned to state n
 
         # detect special alleles for each state
         for n in range(self.num):
             # [N(A|S_n) > thresh1] & [N(A|S_other) == 0] & [N(R|S_other) > thresh2]
             result.loc[:, n] = (N_alt_mtx.loc[:, n].values > thresh1) & \
                 ((np.squeeze(np.asarray(self.alt_bc_mtx.sum(axis=1))) - N_alt_mtx.loc[:, n].values) == 0) & \
-                ((np.squeeze(np.asarray(self.ref_bc_mtx.sum(axis=1))) - N_ref_mtx.loc[:, n].values) > thresh2)
+                ((np.squeeze(np.asarray(self.ref_bc_mtx.sum(axis=1))) - N_ref_mtx.loc[:, n].values) > thresh2 * (self.num - 1))
         
-        self.dist_alleles =  result.loc[result.sum(axis=1) > 0].index
+        dist_alleles =  result.loc[result.sum(axis=1) > 0].index
+        to_drop = []
+        for allele in dist_alleles:
+            ref, alt = N_ref_mtx.loc[allele, :], N_alt_mtx.loc[allele, :]
+            failed = 0
+            for i in range(self.num):
+                if alt[i] > thresh1:
+                    for j in range(self.num):
+                        if (j != i) & (ref[j] < thresh2):
+                            failed = 1
+                            break
+                    if failed == 1:
+                        to_drop.append(allele)
+                        break
+        self.dist_alleles = dist_alleles.drop(to_drop)
 
 
 def main():
