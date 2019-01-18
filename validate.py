@@ -1,6 +1,6 @@
 """
 Reference free AF-based demultiplexing on pooled scRNA-seq
-Genotype verification comparing sc-Split results with known genotypes
+Genotype validation comparing sc-Split results with known genotypes
 Jon Xu (jun.xu@uq.edu.au)
 Lachlan Coin
 Aug 2018
