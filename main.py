@@ -239,6 +239,7 @@ class models:
             self.dist_alleles.append(alt_or_ref[alt_or_ref.loc[:, pair].var(axis=1) > 0].index[0])
 
         self.dist_alleles = list(set(self.dist_alleles))
+        self.dist_matrix = alt_or_ref.loc[self.dist_alleles]
 
 
 def main():
@@ -285,8 +286,8 @@ def main():
             myfile.write(str(item) + '\n')
     with open('doublet.txt', 'w') as myfile:
         myfile.write('Cluster ' + str(model.doublet) + ' is doublet.\n')
-    with open('sc_split.log', 'a') as myfile:
-        myfile.write('doublet: ' + str(model.doublet) + '\n' + 'ML: ' + str(max_likelihood) + '\n')
+    model.dist_matrix.to_csv('dist_matrix.csv')
+
 
 if __name__ == '__main__':
     main()
