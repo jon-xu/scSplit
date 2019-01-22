@@ -14,7 +14,6 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import datetime
 import pickle
-import csv
 
 class models:
     def __init__(self, base_calls_mtx, num):
@@ -171,25 +170,75 @@ class models:
             N_ref_mtx, N_alt_mtx: SNV-state matrix for ref/alt counts in each state
         """
         
-        # self.dist_alleles = []
-        # for item in self.all_POS:
-        #     if len([item for item in self.model_af.loc[item, :] if item > 0.7]) == 1:
-        #         if len([item for item in self.model_af.loc[item, :] if item < 0.3]) == self.num - 1:
-        #             self.dist_alleles.append(item)
-
         # build SNV-state matrices for ref and alt counts
-        thresh1 = 5     # threshold for ALT alleles
-        N_ref_mtx = pd.DataFrame(0, index=model.all_POS, columns=range(model.num))
-        N_alt_mtx = pd.DataFrame(0, index=model.all_POS, columns=range(model.num))
-        result = pd.DataFrame(0, index=model.all_POS, columns=range(model.num))
-        for n in range(model.num):
-            bc_idx = [i for i, e in enumerate(model.barcodes) if e in model.assigned[n]]
-            N_ref_mtx.loc[:, n] = model.ref_bc_mtx[:, bc_idx].sum(axis=1)    # REF alleles counts from cells assigned to state n
-            N_alt_mtx.loc[:, n] = model.alt_bc_mtx[:, bc_idx].sum(axis=1)    # ALT alleles counts from cells assigned to state n
-        result = ((N_alt_mtx >= 2) * 1) - ((N_ref_mtx >= thresh1) & (N_alt_mtx == 0) * 1)
-        result[result == 0] = float('NaN')
-        result[result == -1] = 0
-        result.to_csv('allele_matrix.csv')
+        self.dist_alleles, todo = [], []    # start column; window size for splitting the clusters; final alleles
+        N_ref_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
+        N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
+
+        for n in range(self.num):
+            bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]  # get barcodes for cluster n
+            N_ref_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1)    # REF alleles counts from cells assigned to state n
+            N_alt_mtx.loc[:, n] = self.alt_bc_mtx[:, bc_idx].sum(axis=1)    # ALT alleles counts from cells assigned to state n
+        # judge N(A) or N(R) for each cluster
+        alt_or_ref = (((N_alt_mtx >= 2) * 1) - ((N_ref_mtx >= 5) & (N_alt_mtx == 0) * 1)).drop(self.doublet, axis=1).astype(np.int64)
+        alt_or_ref[alt_or_ref == 0], alt_or_ref[alt_or_ref == -1] = float('NaN'), 0     # formatting data for further analysis
+
+        # find unique alleles for each column window and merge
+        while len(self.dist_alleles) < (self.num - 1):                          # run till number of alleles equals to dimension of row/column space 
+            start, ncols, selected, least_ones = 0, self.num - 1, [], []
+            while len(least_ones) < (ncols - start + 1):                        # run till number of alleles equals to dimension of row/column space in the reduced window
+                submatrix = alt_or_ref.iloc[:, start:ncols]                     # get sub-group
+                # informative alleles for the selected clusters with no NAs
+                if start < ncols: informative_sub = submatrix[(submatrix.var(axis=1) > 0) & (submatrix.count(axis=1) == submatrix.shape[1])]
+                else: informative_sub = submatrix[submatrix.count(axis=1) == submatrix.shape[1]]
+                #if informative_sub.index.values.size >= (ncols - start):        # no need to continue if informative alleles are less than expected colspace
+                if informative_sub.index.values.size > 0:        # no need to continue if informative alleles are less than expected colspace
+                    patt = informative_sub.astype(str).values.sum(axis=1)       # concatenate all clusters for comparison
+                    unq = np.unique(patt, return_inverse=True)                  # find unique information patterns
+                    if len(unq[0]) >= (ncols - start):                          # no need to continue if unique patterns are less than expected colspace
+                        for j in range(len(unq[0])):	                            # loop for each unique cross-cluster pattern
+                            # first informative alleles for each unique pattern in the cluster screen which has maximum non-NA values in original information matrix
+                            selected.append(alt_or_ref.loc[informative_sub.iloc[[i for i, x in enumerate(unq[1]) if x == j]].index].count(axis=1).idxmax())
+                        subt = alt_or_ref.loc[np.unique(selected)].iloc[:, start:ncols]    # get submatrix at the selected alleles
+                        d = np.linalg.svd(subt, full_matrices=False)[1]
+                        if sum(d > 1e-10) >= (ncols - start):
+                            least_ones = [subt[subt.sum(axis=1) == min(subt.sum(axis=1))].index[0]]  # take the first allele with least ones
+                            while len(least_ones) < (ncols - start):
+                                svd = np.linalg.svd(subt.loc[least_ones].transpose(), full_matrices=False)
+                                U, V = svd[0], svd[2]
+                                if len(least_ones) == 1: D=np.asmatrix(svd[1])
+                                else: D = np.diag(svd[1])
+                                Vinv, Dinv = np.linalg.solve(V, np.diag([1]*len(V))), np.linalg.solve(D, np.diag([1]*len(D)))
+                                colU = U.shape[1]
+                                proj = np.asmatrix(np.zeros((colU,subt.shape[0])))
+                                for j in range(subt.shape[0]):
+                                    for i in range(colU):
+                                        proj[i, j] = np.matmul(U[:,i], subt.iloc[j])
+                                W = np.matmul(np.matmul(Vinv, Dinv), proj)
+                                R = np.matmul(subt.loc[least_ones].transpose(), W)
+                                diff = (subt.transpose() - R).transpose()
+                                subt1 = subt.loc[diff[diff.var(axis=1) > (0.5 * max(diff.var(axis=1)))].index]
+                                least_ones += [subt1[subt1.sum(axis=1) == min(subt1.sum(axis=1))].index[0]]
+                ncols -= 1                                                                  # try less number of clusters
+            self.dist_alleles += least_ones
+            start = ncols + 1                                                               # try next group of clusters
+
+        self.dist_alleles = list(set(self.dist_alleles))                                    # get unique alleles
+
+        # number of rows to distinguish each cluster pair
+        col_diff = pd.DataFrame(0, index=alt_or_ref.columns, columns=alt_or_ref.columns)
+        for i in range(1, col_diff.shape[0]):
+            for j in range(i):
+                # number of alleles that cluster i and j are different in
+                col_diff.iloc[i, j] = (alt_or_ref.loc[self.dist_alleles].iloc[:, [i, j]].var(axis=1) > 0).sum()
+                if col_diff.iloc[i, j] == 0:
+                    todo.append([i, j])
+
+        # for non-covered pairs, expand to get distinguishing alleles
+        for pair in todo:
+            self.dist_alleles.append(alt_or_ref[alt_or_ref.loc[:, pair].var(axis=1) > 0].index[0])
+
+        self.dist_alleles = list(set(self.dist_alleles))
 
 
 def main():
