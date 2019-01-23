@@ -172,44 +172,41 @@ class models:
         
         # build SNV-state matrices for ref and alt counts
         self.dist_alleles, todo = [], []    # start column; window size for splitting the clusters; final alleles
-        N_ref_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
-        N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
+        N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num)), pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
 
         for n in range(self.num):
-            bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]  # get barcodes for cluster n
-            N_ref_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1)    # REF alleles counts from cells assigned to state n
-            N_alt_mtx.loc[:, n] = self.alt_bc_mtx[:, bc_idx].sum(axis=1)    # ALT alleles counts from cells assigned to state n
+            bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]
+            # REF/ALT alleles counts from cells assigned to state n
+            N_ref_mtx.loc[:, n], N_alt_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1), self.alt_bc_mtx[:, bc_idx].sum(axis=1)
         # judge N(A) or N(R) for each cluster
         alt_or_ref = (((N_alt_mtx >= 2) * 1) - ((N_ref_mtx >= 5) & (N_alt_mtx == 0) * 1)).drop(self.doublet, axis=1).astype(np.int64)
         alt_or_ref[alt_or_ref == 0], alt_or_ref[alt_or_ref == -1] = float('NaN'), 0     # formatting data for further analysis
 
-        # find unique alleles for each column window and merge
+        # find unique alleles for each column window and then merge
         while len(self.dist_alleles) < (self.num - 1):                          # run till number of alleles equals to dimension of row/column space 
             start, ncols, selected, least_ones = 0, self.num - 1, [], []
             while len(least_ones) < (ncols - start + 1):                        # run till number of alleles equals to dimension of row/column space in the reduced window
-                submatrix = alt_or_ref.iloc[:, start:ncols]                     # get sub-group
+                submatrix = alt_or_ref.iloc[:, start:ncols]
                 # informative alleles for the selected clusters with no NAs
                 if start < ncols: informative_sub = submatrix[(submatrix.var(axis=1) > 0) & (submatrix.count(axis=1) == submatrix.shape[1])]
                 else: informative_sub = submatrix[submatrix.count(axis=1) == submatrix.shape[1]]
-                #if informative_sub.index.values.size >= (ncols - start):        # no need to continue if informative alleles are less than expected colspace
-                if informative_sub.index.values.size > 0:        # no need to continue if informative alleles are less than expected colspace
-                    patt = informative_sub.astype(str).values.sum(axis=1)       # concatenate all clusters for comparison
-                    unq = np.unique(patt, return_inverse=True)                  # find unique information patterns
+                if informative_sub.index.values.size > 0:
+                    patt = informative_sub.astype(str).values.sum(axis=1)
+                    unq = np.unique(patt, return_inverse=True)                  # find unique patterns
                     if len(unq[0]) >= (ncols - start):                          # no need to continue if unique patterns are less than expected colspace
-                        for j in range(len(unq[0])):	                            # loop for each unique cross-cluster pattern
+                        for j in range(len(unq[0])):	                        # for each unique cross-cluster pattern
                             # first informative alleles for each unique pattern in the cluster screen which has maximum non-NA values in original information matrix
                             selected.append(alt_or_ref.loc[informative_sub.iloc[[i for i, x in enumerate(unq[1]) if x == j]].index].count(axis=1).idxmax())
                         subt = alt_or_ref.loc[np.unique(selected)].iloc[:, start:ncols]    # get submatrix at the selected alleles
                         d = np.linalg.svd(subt, full_matrices=False)[1]
                         if sum(d > 1e-10) >= (ncols - start):
-                            least_ones = [subt[subt.sum(axis=1) == min(subt.sum(axis=1))].index[0]]  # take the first allele with least ones
-                            while len(least_ones) < (ncols - start):
+                            least_ones = [subt[subt.sum(axis=1) == min(subt.sum(axis=1))].index[0]]  # take the first from alleles with least ones
+                            while len(least_ones) < (ncols - start):            # Gram-Schmidt Process
                                 svd = np.linalg.svd(subt.loc[least_ones].transpose(), full_matrices=False)
                                 U, V = svd[0], svd[2]
                                 if len(least_ones) == 1: D=np.asmatrix(svd[1])
                                 else: D = np.diag(svd[1])
-                                Vinv, Dinv = np.linalg.solve(V, np.diag([1]*len(V))), np.linalg.solve(D, np.diag([1]*len(D)))
-                                colU = U.shape[1]
+                                colU, Vinv, Dinv = U.shape[1], np.linalg.solve(V, np.diag([1]*len(V))), np.linalg.solve(D, np.diag([1]*len(D)))
                                 proj = np.asmatrix(np.zeros((colU,subt.shape[0])))
                                 for j in range(subt.shape[0]):
                                     for i in range(colU):
