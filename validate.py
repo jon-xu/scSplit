@@ -33,24 +33,22 @@ def main():
 
     with open(out_file, 'w') as myfile: myfile.write('For all distintuishing alleles:\n\n') 
 
-    ### check distinguishing alleles
+    ### check genotypes of distinguishing alleles according to sample VCF
     for line in open(dist_file, 'r'):
         dist_alleles.append(line.strip())
+    matrix_imputed = pd.DataFrame(-1, index=dist_alleles, columns=range(8))
     for item in dist_alleles:
         for record in vcf.Reader(open(ori_vcf, 'r')):
             if str(record.CHROM) == item.split(':')[0]:
                 if str(record.POS) == item.split(':')[1]:
-                    counts, uniq, clusters = len(record.samples), -1, []
-                    for sample in record.samples:
-                        clusters.append(np.argmax(sample['GP']))    # for each sample, mark the most likely genotype
-                    for cluster in clusters:    # find the least appearing cluster (unique cluster for each allele)
-                        if clusters.count(cluster) < counts:
-                            counts, uniq = clusters.count(cluster), clusters.index(cluster)
-                    with open(out_file, 'a') as myfile:
-                        if clusters.count(clusters[uniq]) == 1:
-                            myfile.write(str(item) + ' is unique allele for cluster ' + str(uniq) + '\n')
-                        else: myfile.write(str(item) + ' is NOT a unique allele\n')
+                    for s, sample in enumerate(record.samples):
+                        if sample['GP'][0] > 0.99:
+                            matrix_imputed.loc[item][s] = 0
+                        elif sample['GP'][0] < 0.01:
+                            matrix_imputed.loc[item][s] = 1
                     break
+
+    matrix_imputed.to_csv('matrix_imputed.csv')
 
     ### check genotype similarity
 
@@ -80,7 +78,7 @@ def main():
     paa = (paa > 0.99) * 3
     scsplit = prr + pra + paa   # for each SNV and sample, the value will only be 1, 2, 3 or NA
 
-    # build genotype matrix from vcf                                    ### are SNVs in the ori_vcf same as the ref/alt matrices
+    # build genotype matrix from vcf
     prr[:] = pra[:] = paa[:] = 0    
     for record in vcf.Reader(open(ori_vcf, 'r')):
         pos = record.CHROM + ':' + str(record.POS)
