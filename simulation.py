@@ -6,7 +6,7 @@ Aug 2018
 """
 
 import vcf  # https://pyvcf.readthedocs.io/en/latest/INTRO.html
-import random, datetime
+import random, datetime, argparse
 import numpy as np
 import pysam as ps  # http://pysam.readthedocs.io/en/latest/api.html#sam-bam-files
 import pandas as pd
@@ -25,7 +25,7 @@ class SNV_data:
         self.SAMPLES = samples   # mixed samples
 
 
-def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
+def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
     """
     Build pandas DataFrame
     Parameters:
@@ -33,8 +33,6 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
         all_SNVs: list of SNV_data objects
         barcodes(list): cell barcodes
     """
-
-    num = 2  # user input
 
     # randomly put all barcodes into the groups
     groups = [random.randint(0, num-1) for item in range(len(barcodes))]
@@ -128,27 +126,30 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes):
 
 def main():
 
-    # Input and output files
-    file_v = 'input.vcf'
-    file_b = 'input.txt'
-    file_i = 'input.bam'
-    file_o = 'sim.bam'
-    out_csv_ref = 'ref_sim.csv'
-    out_csv_alt = 'alt_sim.csv'
+    # Process command line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n', '--num', type=int, required=True, help='Number of samples')
+    parser.add_argument('-i', '--input', required=True,  help='Input BAM')
+    parser.add_argument('-v', '--vcf', required=True,  help='Input VCF')
+    parser.add_argument('-b', '--barcodes', required=True,  help='Barcodes')
+    parser.add_argument('-o', '--output', required=True,  help='Output BAM')
+    parser.add_argument('-r', '--ref', required=True,  help='Output ref CSV')
+    parser.add_argument('-a', '--alt', required=True,  help='Output alt CSV')
+    args = parser.parse_args()
     
     all_SNVs = []  # list of SNV_data objects
-    for record in vcf.Reader(open(file_v, 'r')):
+    for record in vcf.Reader(open(args.vcf, 'r')):
         # haven't decided which sample here, just ignore SNV with multiple bases (e.g. GGGT/GGAT)
         if (len(record.REF) == 1) & (len(record.ALT) == 1):
             all_SNVs.append(SNV_data(record.CHROM, record.POS, record.REF, record.ALT, record.samples))
     
     barcodes = []   # list of cell barcodes
-    for line in open(file_b, 'r'):
+    for line in open(args.barcodes, 'r'):
         barcodes.append(line.strip())
 
-    base_calls_mtx = simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes)
-    base_calls_mtx[0].to_csv('{}'.format(out_csv_ref))
-    base_calls_mtx[1].to_csv('{}'.format(out_csv_alt))
+    base_calls_mtx = simulate_base_calls_matrix(args.input, args.output, all_SNVs, args.barcodes, args.num)
+    base_calls_mtx[0].to_csv('{}'.format(args.ref))
+    base_calls_mtx[1].to_csv('{}'.format(args.alt))
 
 if __name__ == '__main__':
     main()

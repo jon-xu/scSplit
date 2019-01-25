@@ -12,7 +12,7 @@ from scipy.sparse import csr_matrix
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-import datetime, pickle
+import datetime, pickle, argparse
 
 class models:
     def __init__(self, base_calls_mtx, num):
@@ -240,17 +240,20 @@ class models:
 
 def main():
 
-    num_models = 7          # number of models in each run
-
-    # input and output files
-    ref_csv, alt_csv = 'ref_filtered.csv', 'alt_filtered.csv'  # reference and alternative matrices
+    # Process command line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-r', '--ref', required=True,  help='Ref count CSV')
+    parser.add_argument('-a', '--alt', required=True,  help='Alt count CSV')
+    parser.add_argument('-n', '--num', required=True,  help='Number of samples')
+    args = parser.parse_args()
+    dist_alleles = []
 
     progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
     with open('sc_split.log', 'a') as myfile: myfile.write(progress)
 
     # Read in existing matrix from the csv files
-    ref = pd.read_csv(ref_csv, header=0, index_col=0)  # read ref matrix with header line and column
-    alt = pd.read_csv(alt_csv, header=0, index_col=0)  # read alt matrix with header line and column
+    ref = pd.read_csv(args.ref, header=0, index_col=0)  # read ref matrix with header line and column
+    alt = pd.read_csv(args.alt, header=0, index_col=0)  # read alt matrix with header line and column
     ref_s, alt_s = csr_matrix(ref.values), csr_matrix(alt.values)
     base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
     progress = 'AF matrices uploaded: ' + str(datetime.datetime.now()) + '\n'
@@ -259,7 +262,7 @@ def main():
     max_likelihood = -1e10
     for i in range(30):
         with open('sc_split.log', 'a') as myfile: myfile.write('round ' + str(i) + '\n')
-        model = models(base_calls_mtx, num_models)  # model initialisation
+        model = models(base_calls_mtx, args.num)  # model initialisation
         model.run_EM()  # model training
         model.assign_cells()    # assign cells to states
         if model.sum_log_likelihood[-1] > max_likelihood:
@@ -270,19 +273,19 @@ def main():
     model.distinguishing_alleles()  # find the distinguishing alleles
 
     # generate outputs
-    with open('model.final', 'wb') as f:
+    with open('scsplit_model', 'wb') as f:
         pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
-    for n in range(num_models+1):
-        with open('barcodes_{}.csv'.format(n), 'w') as myfile:
+    for n in range(args.num+1):
+        with open('scsplit_barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
-    model.P_s_c.to_csv('P_s_c.csv')
-    with open('dist_alleles.txt', 'w') as myfile:
+    model.P_s_c.to_csv('scsplit_P_s_c.csv')
+    with open('scsplit_dist_alleles.txt', 'w') as myfile:
         for item in model.dist_alleles:
             myfile.write(str(item) + '\n')
-    with open('doublet.txt', 'w') as myfile:
+    with open('scsplit_doublet.txt', 'w') as myfile:
         myfile.write('Cluster ' + str(model.doublet) + ' is doublet.\n')
-    model.dist_matrix.to_csv('dist_matrix.csv')
+    model.dist_matrix.to_csv('scsplit_dist_matrix.csv')
 
 
 if __name__ == '__main__':

@@ -7,7 +7,7 @@ jun.xu@uq.edu.au
 """
 
 import vcf  # https://pyvcf.readthedocs.io/en/latest/INTRO.html
-import math, datetime
+import math, argparse, datetime
 import numpy as np
 import pysam as ps  # http://pysam.readthedocs.io/en/latest/api.html#sam-bam-files
 import pandas as pd
@@ -71,28 +71,32 @@ def build_base_calls_matrix(file_s, all_SNVs, barcodes):
 
 def main():
 
-    # Input and output files
-    file_v = 'mixed.vcf'    # vcf called from mixed bam
-    file_s = 'mixed.bam'    # BAM file of mixed samples
-    file_b = 'barcodes.tsv'   # known and checked barcodes
-    out_csv_ref = 'ref_filtered.csv'
-    out_csv_alt = 'alt_filtered.csv'
+    # Process command line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-v', '--vcf', required=True,  help='VCF from mixed BAM')
+    parser.add_argument('-i', '--bam', required=True, help='mixed sample BAM')
+    parser.add_argument('-b', '--barcodes', required=True,  help='barcodes')
+    parser.add_argument('-r', '--ref', required=True,  help='Ref count CSV')
+    parser.add_argument('-a', '--alt', required=True,  help='Alt count CSV')
+ 
+    args = parser.parse_args()
+    dist_alleles = []
     
     epsilon = 0.01
 
     all_SNVs = []  # list of SNV_data objects
-    for record in vcf.Reader(open(file_v, 'r')):
+    for record in vcf.Reader(open(args.vcf, 'r')):
         # only keep SNVs with heterozygous genotypes, and ignore SNV with multiple bases (e.g. GGGT/GGAT)
         if (record.samples[0]['GL'][1] > np.log10(1-epsilon)) & (len(record.REF) == 1) & (len(record.ALT) == 1):
             all_SNVs.append(SNV_data(record.CHROM, record.POS, record.REF, record.ALT[0]))
     
     barcodes = []   # list of cell barcodes
-    for line in open(file_b, 'r'):
+    for line in open(args.barcodes, 'r'):
         barcodes.append(line.strip())
 
-    base_calls_mtx = build_base_calls_matrix(file_s, all_SNVs, barcodes)
-    base_calls_mtx[0].to_csv('{}'.format(out_csv_ref))
-    base_calls_mtx[1].to_csv('{}'.format(out_csv_alt))
+    base_calls_mtx = build_base_calls_matrix(args.bam, all_SNVs, barcodes)
+    base_calls_mtx[0].to_csv('{}'.format(args.ref))
+    base_calls_mtx[1].to_csv('{}'.format(args.alt))
 
 if __name__ == '__main__':
     main()
