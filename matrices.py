@@ -19,10 +19,10 @@ class SNV_data:
 
     def __init__(self, chrom, pos, ref, alt):
 
-        self.CHROM = chrom   # chromosome number
-        self.POS = pos       # position on chromosome
-        self.REF = ref       # reference base
-        self.ALT = alt       # alternate base
+        self.CHROM = chrom
+        self.POS = pos
+        self.REF = ref
+        self.ALT = alt
 
 
 def build_base_calls_matrix(file_s, all_SNVs, barcodes):
@@ -34,7 +34,7 @@ def build_base_calls_matrix(file_s, all_SNVs, barcodes):
         barcodes(list): cell barcodes
     """
 
-    all_POS = []   # snv positions (1-based positions from vcf file)
+    all_POS = []   # snv positions
     for entry in all_SNVs:
         pos = str(entry.CHROM) + ':' + str(entry.POS)
         if pos not in all_POS:
@@ -47,7 +47,6 @@ def build_base_calls_matrix(file_s, all_SNVs, barcodes):
 
     for snv in all_SNVs:
         position = str(snv.CHROM) + ':' + str(snv.POS)
-        # use pysam.AlignedSegment.fetch instead of pysam.AlignedSegment.pileup which doesn't contain barcode information
         for read in in_sam.fetch(snv.CHROM, snv.POS-1, snv.POS+1):
             if read.flag < 256:   # only valid reads
                 if (snv.POS - 1) in read.get_reference_positions():
@@ -78,10 +77,9 @@ def main():
     parser.add_argument('-b', '--barcodes', required=True,  help='barcodes')
     parser.add_argument('-r', '--ref', required=True,  help='Ref count CSV')
     parser.add_argument('-a', '--alt', required=True,  help='Alt count CSV')
- 
     args = parser.parse_args()
-    dist_alleles = []
     
+    dist_alleles = []
     epsilon = 0.01
 
     all_SNVs = []  # list of SNV_data objects

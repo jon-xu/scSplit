@@ -27,8 +27,8 @@ def main():
     args = parser.parse_args()
     dist_alleles = []
 
-    ref = pd.read_csv(ref_csv, header=0, index_col=0)
-    alt = pd.read_csv(alt_csv, header=0, index_col=0)
+    ref = pd.read_csv(args.ref, header=0, index_col=0)
+    alt = pd.read_csv(args.alt, header=0, index_col=0)
     ref_s, alt_s = csr_matrix(ref.values), csr_matrix(alt.values)
     all_POS = ref.index    
 

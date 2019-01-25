@@ -57,7 +57,6 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
 
     for snv in all_SNVs:
         position = str(snv.CHROM) + ':' + str(snv.POS)
-        # use pysam.AlignedSegment.fetch instead of pysam.AlignedSegment.pileup which doesn't contain barcode information
         for read in in_sam.fetch(snv.CHROM, snv.POS-1, snv.POS+1):
             if read.flag < 256:   # only valid reads
                 if (snv.POS - 1) in read.get_reference_positions():
@@ -68,7 +67,7 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
                         # get sample id from randomly generated grouping indexes for the list of barcodes
                         sample = groups[barcodes.index(barcode)]
 
-                        # calculate probability of A allele based on the genotype probability (GP) or likelihoods (10 ^ GL)
+                        # probability of A allele based on the genotype probability (GP) or likelihoods (10 ^ GL)
                         try:
                             rr = 10 ** snv.SAMPLES[sample]['GL'][0]
                             ra = 10 ** snv.SAMPLES[sample]['GL'][1]
@@ -112,12 +111,10 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
                         pass
                 
                 else:
-                    out_sam.write(read)  # write the read to out_sam without changes if SNV position is not a reference position
+                    out_sam.write(read)
             
             else:
-                out_sam.write(read)  # write the read to out_sam without changes if its flag >= 256
-
-        # reads not overlapping with SNV position is filtered out
+                out_sam.write(read)
 
     ref_base_calls_mtx.index.name = alt_base_calls_mtx.index.name = 'SNV'
 
@@ -137,13 +134,12 @@ def main():
     parser.add_argument('-a', '--alt', required=True,  help='Output alt CSV')
     args = parser.parse_args()
     
-    all_SNVs = []  # list of SNV_data objects
+    all_SNVs = []
     for record in vcf.Reader(open(args.vcf, 'r')):
-        # haven't decided which sample here, just ignore SNV with multiple bases (e.g. GGGT/GGAT)
         if (len(record.REF) == 1) & (len(record.ALT) == 1):
             all_SNVs.append(SNV_data(record.CHROM, record.POS, record.REF, record.ALT, record.samples))
     
-    barcodes = []   # list of cell barcodes
+    barcodes = []
     for line in open(args.barcodes, 'r'):
         barcodes.append(line.strip())
 

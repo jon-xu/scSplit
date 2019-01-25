@@ -33,7 +33,7 @@ class models:
         """
         self.ref_bc_mtx, self.alt_bc_mtx = base_calls_mtx[0], base_calls_mtx[1]
         self.all_POS, self.barcodes = base_calls_mtx[2].tolist(), base_calls_mtx[3].tolist()
-        self.num = num + 1  # including an additional background state for doublets
+        self.num = num + 1  # additional doublet state
         self.P_s_c = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.assigned = []
@@ -55,17 +55,17 @@ class models:
         nrows, ncols = len(rows), len(cols)
         mrows = mcols = 0
         while (mrows < (0.9 * nrows)) or (mcols < (0.9 * ncols)):
-            rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows))*nrows))))    # id of random 10% bottom rows
-            rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols))*ncols))))    # id of random 10% bottom cols
-            rows = np.count_nonzero(base_mtx, axis=1).argsort().tolist()    # pointer of the rows sorted by non_zero counts across cols
-            cols = np.count_nonzero(base_mtx, axis=0).argsort().tolist()    # pointer of the cols sorted by non_zero counts across rows
-            rows = [item for index, item in enumerate(rows) if index not in rbrows]     # remove the randomly picked least non_zero rows
-            cols = [item for index, item in enumerate(cols) if index not in rbcols]     # remove the randomly picked least non_zero cols
-            irows, icols = irows[rows], icols[cols]    # record the index of the remaining rows/cols according to original matrix
+            rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows))*nrows))))
+            rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols))*ncols))))
+            rows = np.count_nonzero(base_mtx, axis=1).argsort().tolist()
+            cols = np.count_nonzero(base_mtx, axis=0).argsort().tolist()
+            rows = [item for index, item in enumerate(rows) if index not in rbrows]
+            cols = [item for index, item in enumerate(cols) if index not in rbcols]
+            irows, icols = irows[rows], icols[cols]
             nrows, ncols = len(rows), len(cols)
             base_mtx = base_mtx[rows][:,cols]
-            mrows = min(np.count_nonzero(base_mtx, axis=0))     # minimum non-zero number of rows (axis=0) among all cols
-            mcols = min(np.count_nonzero(base_mtx, axis=1))     # minimum non-zero number of cols (axis=1) among all rows
+            mrows = min(np.count_nonzero(base_mtx, axis=0))
+            mcols = min(np.count_nonzero(base_mtx, axis=1))
         alt_subset = self.alt_bc_mtx[irows][:, icols].todense()
         ref_subset = self.ref_bc_mtx[irows][:, icols].todense()
         alt_prop = (alt_subset + 0.01) / (alt_subset + ref_subset + 0.02)
@@ -90,15 +90,14 @@ class models:
 
         # commencing E-M
         iterations = 0
-        self.sum_log_likelihood = [1,2]  # dummy likelihood as a start
+        self.sum_log_likelihood = [1,2]
         while self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]:
             iterations += 1
             progress = 'Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
             with open('sc_split.log', 'a') as myfile: myfile.write(progress)
-            self.calculate_cell_likelihood()  # E-step, calculate the expected cell origin likelihood with a function of self.model_af (theta)
-            self.calculate_model_af()  # M-step, to optimise unknown model parameter self.model_af (theta)
-            # approximation due to python calculation limit
-            self.sum_log_likelihood.append(self.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], thus LL = Sum_c{log[Sum_s(P(c|s))]}
+            self.calculate_cell_likelihood()  # E-step
+            self.calculate_model_af()  # M-step
+            self.sum_log_likelihood.append(self.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], LL = Sum_c{log[Sum_s(P(c|s))]}
 
 
     def calculate_cell_likelihood(self):
@@ -114,7 +113,7 @@ class models:
         for n in range(self.num):
             matcalc = self.alt_bc_mtx.T.multiply(self.model_af.loc[:, n].apply(np.log2)).T \
                     + self.ref_bc_mtx.T.multiply((1 - self.model_af.loc[:, n]).apply(np.log2)).T
-            self.lP_c_s.loc[:, n] = matcalc.sum(axis=0).tolist()[0]  # log likelihood to avoid python computation limit of 1e-323/1e+308
+            self.lP_c_s.loc[:, n] = matcalc.sum(axis=0).tolist()[0]
 
         # transform to cell sample probability P(s|c) using Baysian rule
         for i in range(self.num):
@@ -150,8 +149,8 @@ class models:
             Locate the doublet state
         """
         cross_state = pd.DataFrame(0, index = range(self.num), columns = range(self.num))
-        for i in range(self.num):       # target state
-            for j in range(self.num):   # barcode assigned state
+        for i in range(self.num):
+            for j in range(self.num):
                 index = []
                 # transform barcode assignments to indices
                 for item in self.assigned[j]:
@@ -170,7 +169,7 @@ class models:
         """
         
         # build SNV-state matrices for ref and alt counts
-        self.dist_alleles, todo = [], []    # start column; window size for splitting the clusters; final alleles
+        self.dist_alleles, todo = [], []
         N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num)), pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
 
         for n in range(self.num):
@@ -182,24 +181,24 @@ class models:
         alt_or_ref[alt_or_ref == 0], alt_or_ref[alt_or_ref == -1] = float('NaN'), 0     # formatting data for further analysis
 
         # find unique alleles for each column window and then merge
-        while len(self.dist_alleles) < (self.num - 1):                          # run till number of alleles equals to dimension of row/column space 
+        while len(self.dist_alleles) < (self.num - 1):                          
             start, ncols, selected, least_ones = 0, self.num - 1, [], []
-            while len(least_ones) < (ncols - start + 1):                        # run till number of alleles equals to dimension of row/column space in the reduced window
+            while len(least_ones) < (ncols - start + 1):                        
                 submatrix = alt_or_ref.iloc[:, start:ncols]
                 # informative alleles for the selected clusters with no NAs
                 if start < ncols: informative_sub = submatrix[(submatrix.var(axis=1) > 0) & (submatrix.count(axis=1) == submatrix.shape[1])]
                 else: informative_sub = submatrix[submatrix.count(axis=1) == submatrix.shape[1]]
                 if informative_sub.index.values.size > 0:
                     patt = informative_sub.astype(str).values.sum(axis=1)
-                    unq = np.unique(patt, return_inverse=True)                  # find unique patterns
-                    if len(unq[0]) >= (ncols - start):                          # no need to continue if unique patterns are less than expected colspace
-                        for j in range(len(unq[0])):	                        # for each unique cross-cluster pattern
+                    unq = np.unique(patt, return_inverse=True)                  
+                    if len(unq[0]) >= (ncols - start):
+                        for j in range(len(unq[0])):
                             # first informative alleles for each unique pattern in the cluster screen which has maximum non-NA values in original information matrix
                             selected.append(alt_or_ref.loc[informative_sub.iloc[[i for i, x in enumerate(unq[1]) if x == j]].index].count(axis=1).idxmax())
-                        subt = alt_or_ref.loc[np.unique(selected)].iloc[:, start:ncols]    # get submatrix at the selected alleles
+                        subt = alt_or_ref.loc[np.unique(selected)].iloc[:, start:ncols] 
                         d = np.linalg.svd(subt, full_matrices=False)[1]
                         if sum(d > 1e-10) >= (ncols - start):
-                            least_ones = [subt[subt.sum(axis=1) == min(subt.sum(axis=1))].index[0]]  # take the first from alleles with least ones
+                            least_ones = [subt[subt.sum(axis=1) == min(subt.sum(axis=1))].index[0]]
                             while len(least_ones) < (ncols - start):            # Gram-Schmidt Process
                                 svd = np.linalg.svd(subt.loc[least_ones].transpose(), full_matrices=False)
                                 U, V = svd[0], svd[2]
@@ -215,11 +214,11 @@ class models:
                                 diff = (subt.transpose() - R).transpose()
                                 subt1 = subt.loc[diff[diff.var(axis=1) > (0.5 * max(diff.var(axis=1)))].index]
                                 least_ones += [subt1[subt1.sum(axis=1) == min(subt1.sum(axis=1))].index[0]]
-                ncols -= 1                                                                  # try less number of clusters
+                ncols -= 1
             self.dist_alleles += least_ones
-            start = ncols + 1                                                               # try next group of clusters
+            start = ncols + 1
 
-        self.dist_alleles = list(set(self.dist_alleles))                                    # get unique alleles
+        self.dist_alleles = list(set(self.dist_alleles))
 
         # number of rows to distinguish each cluster pair
         col_diff = pd.DataFrame(0, index=alt_or_ref.columns, columns=alt_or_ref.columns)
@@ -246,14 +245,13 @@ def main():
     parser.add_argument('-a', '--alt', required=True,  help='Alt count CSV')
     parser.add_argument('-n', '--num', required=True,  help='Number of samples')
     args = parser.parse_args()
-    dist_alleles = []
 
     progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
     with open('sc_split.log', 'a') as myfile: myfile.write(progress)
 
     # Read in existing matrix from the csv files
-    ref = pd.read_csv(args.ref, header=0, index_col=0)  # read ref matrix with header line and column
-    alt = pd.read_csv(args.alt, header=0, index_col=0)  # read alt matrix with header line and column
+    ref = pd.read_csv(args.ref, header=0, index_col=0)
+    alt = pd.read_csv(args.alt, header=0, index_col=0)
     ref_s, alt_s = csr_matrix(ref.values), csr_matrix(alt.values)
     base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
     progress = 'AF matrices uploaded: ' + str(datetime.datetime.now()) + '\n'
@@ -262,15 +260,15 @@ def main():
     max_likelihood = -1e10
     for i in range(30):
         with open('sc_split.log', 'a') as myfile: myfile.write('round ' + str(i) + '\n')
-        model = models(base_calls_mtx, args.num)  # model initialisation
-        model.run_EM()  # model training
-        model.assign_cells()    # assign cells to states
+        model = models(base_calls_mtx, args.num)
+        model.run_EM()
+        model.assign_cells()
         if model.sum_log_likelihood[-1] > max_likelihood:
             max_likelihood = model.sum_log_likelihood[-1]
             initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
     model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
-    model.define_doublet()  # find the doublet state
-    model.distinguishing_alleles()  # find the distinguishing alleles
+    model.define_doublet()
+    model.distinguishing_alleles()
 
     # generate outputs
     with open('scsplit_model', 'wb') as f:
