@@ -7,11 +7,10 @@ jun.xu@uq.edu.au
 """
 
 import vcf  # https://pyvcf.readthedocs.io/en/latest/INTRO.html
-import math
+import math, datetime
 import numpy as np
 import pysam as ps  # http://pysam.readthedocs.io/en/latest/api.html#sam-bam-files
 import pandas as pd
-import datetime
 
 class SNV_data:
     """

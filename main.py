@@ -12,8 +12,7 @@ from scipy.sparse import csr_matrix
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-import datetime
-import pickle
+import datetime, pickle
 
 class models:
     def __init__(self, base_calls_mtx, num):
