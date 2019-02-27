@@ -273,7 +273,7 @@ def main():
     # generate outputs
     with open('scsplit_model', 'wb') as f:
         pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
-    for n in range(args.num+1):
+    for n in range(int(args.num)+1):
         with open('scsplit_barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
