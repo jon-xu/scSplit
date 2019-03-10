@@ -29,11 +29,14 @@
    
    *b) run python script "sc_split_main.py"*
    
-   *c) "barcodes_{n}.csv": N+1 indicating barcodes assigned to each of the N+1 samples (including doublet state)*
-   *d) "model.found", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)*
-   *e) "sc_split.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
+   *c) "sc_split_doublet.txt": indicating which cluster is doublet state*
+   *d) "sc_split_barcodes_{n}.csv": N+1 indicating barcodes assigned to each of the N+1 samples (including doublet state)*
+   *e) "sc_split_dist_alleles.txt": the distinguishing alleles that can be used to genotype and assign sample to clusters*
+   *f) "sc_split_dist_matrix.csv": the ALT alelle Presence/Absence (P/A) matrix as a reference in assigning sasmple to clusters*
+   *g) "model.found", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)*
+   *h) "sc_split.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
 
-##### 5. Output of Genotype likelihoods for models
+##### 5. Generate genotypes based on the split result
    *a) run python script "sc_split_vcf.py"*
    
    *b) VCF file ("sc_split.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.*
