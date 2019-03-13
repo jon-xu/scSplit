@@ -22,12 +22,12 @@
    *b) The output VCF file will be futher filtered so that only the SNVs with quality score larger than 30 would be kept.*
 
 ##### 3. Building allele count matrices
-   *a) run python script "sc_split_matrices.py" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.*
+   *a) run python script "matrices.py" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.*
 
 ##### 4. Exectuion and verification of demultiplexing
    *a) use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file*
    
-   *b) run python script "sc_split_main.py"*
+   *b) run python script "main.py"*
    
    *c) "sc_split_doublet.txt": indicating which cluster is doublet state*
    
@@ -42,7 +42,7 @@
    *h) "sc_split.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
 
 ##### 5. Generate genotypes based on the split result
-   *a) run python script "sc_split_vcf.py"*
+   *a) run python script "genotype.py"*
    
    *b) VCF file ("sc_split.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.*
 
