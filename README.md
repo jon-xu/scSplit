@@ -24,7 +24,7 @@
 ##### 3. Building allele count matrices
    *a) run python script "matrices.py" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.*
    
-   *b) syntax of matrice.py:*
+   *b) syntax:*
    
         -v, --vcf: VCF from mixed BAM
         -i, --bam, mixed sample BAM        
@@ -36,7 +36,8 @@
    *a) use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file*
    
    *b) run python script "main.py"*
-   *c) syntax of matrice.py:*
+   
+   *c) syntax:*
    
         -r, --ref, Ref count CSV as input        
         -a, --alt, Alt count CSV as input        
@@ -58,7 +59,7 @@
 ##### 5. Generate genotypes based on the split result
    *a) run python script "genotype.py"*
    
-   *b) syntax of genotype.py:*
+   *b) syntax:*
           
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
