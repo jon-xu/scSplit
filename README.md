@@ -23,21 +23,31 @@
 
 ##### 3. Building allele count matrices
    *a) run python script "matrices.py" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.*
-   *b) syntax of matrice.py:
+   
+   *b) syntax of matrice.py:*
+   
         -v, --vcf: VCF from mixed BAM
+        
         -i, --bam, mixed sample BAM
+        
         -b, --barcodes, barcodes whitelist
+        
         -r, --ref, Ref count CSV as output
-        -a, --alt, Alt count CSV as output*
+        
+        -a, --alt, Alt count CSV as output
 
 ##### 4. Exectuion and verification of demultiplexing
    *a) use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file*
    
    *b) run python script "main.py"*
-   *c) syntax of matrice.py:
+   *c) syntax of matrice.py:*
+   
         -r, --ref, Ref count CSV as input
+        
         -a, --alt, Alt count CSV as input
-        -n, --num, Number of mixed samples*
+        
+        -n, --num, Number of mixed samples
+        
    
    *d) "sc_split_doublet.txt": indicating which cluster is doublet state*
    
