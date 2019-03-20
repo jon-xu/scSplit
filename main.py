@@ -241,9 +241,9 @@ def main():
 
     # Process command line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('-r', '--ref', required=True,  help='Ref count CSV')
-    parser.add_argument('-a', '--alt', required=True,  help='Alt count CSV')
-    parser.add_argument('-n', '--num', required=True,  help='Number of samples')
+    parser.add_argument('-r', '--ref', required=True,  help='Ref count CSV input')
+    parser.add_argument('-a', '--alt', required=True,  help='Alt count CSV input')
+    parser.add_argument('-n', '--num', required=True,  help='Number of mixed samples')
     args = parser.parse_args()
 
     progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'

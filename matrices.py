@@ -74,9 +74,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--vcf', required=True,  help='VCF from mixed BAM')
     parser.add_argument('-i', '--bam', required=True, help='mixed sample BAM')
-    parser.add_argument('-b', '--barcodes', required=True,  help='barcodes')
-    parser.add_argument('-r', '--ref', required=True,  help='Ref count CSV')
-    parser.add_argument('-a', '--alt', required=True,  help='Alt count CSV')
+    parser.add_argument('-b', '--barcodes', required=True,  help='barcodes whitelist')
+    parser.add_argument('-r', '--ref', required=True,  help='Ref count CSV output')
+    parser.add_argument('-a', '--alt', required=True,  help='Alt count CSV output')
     args = parser.parse_args()
     
     dist_alleles = []
