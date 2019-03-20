@@ -23,23 +23,33 @@
 
 ##### 3. Building allele count matrices
    *a) run python script "matrices.py" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.*
+   *b) syntax of matrice.py:
+        -v, --vcf: VCF from mixed BAM
+        -i, --bam, mixed sample BAM
+        -b, --barcodes, barcodes whitelist
+        -r, --ref, Ref count CSV as output
+        -a, --alt, Alt count CSV as output*
 
 ##### 4. Exectuion and verification of demultiplexing
    *a) use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file*
    
    *b) run python script "main.py"*
+   *c) syntax of matrice.py:
+        -r, --ref, Ref count CSV as input
+        -a, --alt, Alt count CSV as input
+        -n, --num, Number of mixed samples*
    
-   *c) "sc_split_doublet.txt": indicating which cluster is doublet state*
+   *d) "sc_split_doublet.txt": indicating which cluster is doublet state*
    
-   *d) "sc_split_barcodes_{n}.csv": N+1 indicating barcodes assigned to each of the N+1 samples (including doublet state)*
+   *e) "sc_split_barcodes_{n}.csv": N+1 indicating barcodes assigned to each of the N+1 samples (including doublet state)*
    
-   *e) "sc_split_dist_alleles.txt": the distinguishing alleles that can be used to genotype and assign sample to clusters*
+   *f) "sc_split_dist_alleles.txt": the distinguishing alleles that can be used to genotype and assign sample to clusters*
    
-   *f) "sc_split_dist_matrix.csv": the ALT alelle Presence/Absence (P/A) matrix as a reference in assigning sasmple to clusters*
+   *g) "sc_split_dist_matrix.csv": the ALT alelle Presence/Absence (P/A) matrix as a reference in assigning sasmple to clusters*
    
-   *g) "model.found", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)*
+   *h) "model.found", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)*
    
-   *h) "sc_split.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
+   *i) "sc_split.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
 
 ##### 5. Generate genotypes based on the split result
    *a) run python script "genotype.py"*
