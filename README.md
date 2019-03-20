@@ -24,8 +24,6 @@
 ##### 3. Building allele count matrices
    *a) run python script "matrices.py" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.*
    
-   *b) syntax:*
-   
         -v, --vcf: VCF from mixed BAM
         -i, --bam, mixed sample BAM        
         -b, --barcodes, barcodes whitelist        
@@ -37,35 +35,31 @@
    
    *b) run python script "main.py"*
    
-   *c) syntax:*
-   
         -r, --ref, Ref count CSV as input        
         -a, --alt, Alt count CSV as input        
         -n, --num, Number of mixed samples
         
    
-   *d) "sc_split_doublet.txt": indicating which cluster is doublet state*
+   *c) "sc_split_doublet.txt": indicating which cluster is doublet state*
    
-   *e) "sc_split_barcodes_{n}.csv": N+1 indicating barcodes assigned to each of the N+1 samples (including doublet state)*
+   *d) "sc_split_barcodes_{n}.csv": N+1 indicating barcodes assigned to each of the N+1 samples (including doublet state)*
    
-   *f) "sc_split_dist_alleles.txt": the distinguishing alleles that can be used to genotype and assign sample to clusters*
+   *e) "sc_split_dist_alleles.txt": the distinguishing alleles that can be used to genotype and assign sample to clusters*
    
-   *g) "sc_split_dist_matrix.csv": the ALT alelle Presence/Absence (P/A) matrix as a reference in assigning sasmple to clusters*
+   *f) "sc_split_dist_matrix.csv": the ALT alelle Presence/Absence (P/A) matrix as a reference in assigning sasmple to clusters*
    
-   *h) "model.found", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)*
+   *g) "model.found", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)*
    
-   *i) "sc_split.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
+   *h) "sc_split.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
 
 ##### 5. Generate genotypes based on the split result
    *a) run python script "genotype.py"*
-   
-   *b) syntax:*
-          
+             
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
         -p, --psc, generated P(S|C)
         
-   *c) VCF file ("sc_split.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.*
+   *b) VCF file ("sc_split.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.*
 
 <br/>
 
