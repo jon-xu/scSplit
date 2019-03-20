@@ -27,13 +27,9 @@
    *b) syntax of matrice.py:*
    
         -v, --vcf: VCF from mixed BAM
-        
-        -i, --bam, mixed sample BAM
-        
-        -b, --barcodes, barcodes whitelist
-        
-        -r, --ref, Ref count CSV as output
-        
+        -i, --bam, mixed sample BAM        
+        -b, --barcodes, barcodes whitelist        
+        -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
 
 ##### 4. Exectuion and verification of demultiplexing
@@ -42,10 +38,8 @@
    *b) run python script "main.py"*
    *c) syntax of matrice.py:*
    
-        -r, --ref, Ref count CSV as input
-        
-        -a, --alt, Alt count CSV as input
-        
+        -r, --ref, Ref count CSV as input        
+        -a, --alt, Alt count CSV as input        
         -n, --num, Number of mixed samples
         
    
