@@ -58,7 +58,13 @@
 ##### 5. Generate genotypes based on the split result
    *a) run python script "genotype.py"*
    
-   *b) VCF file ("sc_split.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.*
+   *b) syntax of genotype.py:*
+          
+        -r, --ref, Ref count CSV as output        
+        -a, --alt, Alt count CSV as output
+        -p, --psc, generated P(S|C)
+        
+   *c) VCF file ("sc_split.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.*
 
 <br/>
 
