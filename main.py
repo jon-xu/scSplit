@@ -70,7 +70,7 @@ class models:
         ref_subset = self.ref_bc_mtx[irows][:, icols].todense()
         alt_prop = (alt_subset + 0.01) / (alt_subset + ref_subset + 0.02)
         alt_pca = StandardScaler().fit_transform(alt_prop.T)
-        pca = PCA(n_components=20)
+        pca = PCA(n_components=min(nrows, ncols, 20))
         pca_alt = pca.fit_transform(alt_pca)
         kmeans = KMeans(n_clusters=self.num, random_state=0).fit(pca_alt)
     
