@@ -72,6 +72,8 @@ class models:
         alt_pca = StandardScaler().fit_transform(alt_prop.T)
         pca = PCA(n_components=min(nrows, ncols, 20))
         pca_alt = pca.fit_transform(alt_pca)
+        if pca_alt.shape[0] < self.num:
+            sys.exit('not enough informative cells to support model initialization')
         kmeans = KMeans(n_clusters=self.num, random_state=0).fit(pca_alt)
     
         # intialise allele frequency for model states
