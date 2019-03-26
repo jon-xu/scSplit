@@ -17,29 +17,32 @@
    *c) Mark BAM file for duplication, and get it sorted and indexed, using rmdup, sort, index commands in samtools*
    
 ##### 2. Calling for single-nucleotide variants
-   *a) use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1.  Example: freebayes -f <reference.fa> -iXu -C 2 -q 1 target.bam snv.vcf*
+   *a) Use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1.  Example: freebayes -f <reference.fa> -iXu -C 2 -q 1 target.bam snv.vcf*
    
    *b) The output VCF file will be futher filtered so that only the SNVs with quality score larger than 30 would be kept.*
 
 ##### 3. Building allele count matrices
-   *a) run python script "matrices.py" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.*
+   *a) Run python script "matrices.py" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.*
    
         -v, --vcf: VCF from mixed BAM
         -i, --bam, mixed sample BAM        
         -b, --barcodes, barcodes whitelist        
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
+   
+   *b) This step is memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and cell quantity. As a guideline, a matrix with 60,000 SNVs and 10,000 might need more than 30GB RAM to run, please grant enough RAM resource for running the script
 
 ##### 4. Exectuion and verification of demultiplexing
-   *a) use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file*
+   *a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file*
+
+   *b) This step is also memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and cell quantity. As a guideline, a matrix with 60,000 SNVs and 10,000 might need more than 50GB RAM to run, please grant enough RAM resource for running the script
    
-   *b) run python script "main.py"*
+   *b) Run python script "main.py"*
    
         -r, --ref, Ref count CSV as input        
         -a, --alt, Alt count CSV as input        
         -n, --num, Number of mixed samples
         
-   
    *c) "sc_split_doublet.txt": indicating which cluster is doublet state*
    
    *d) "sc_split_barcodes_{n}.csv": N+1 indicating barcodes assigned to each of the N+1 samples (including doublet state)*
@@ -53,7 +56,7 @@
    *h) "sc_split.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
 
 ##### 5. Generate genotypes based on the split result
-   *a) run python script "genotype.py"*
+   *a) Run python script "genotype.py"*
              
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
