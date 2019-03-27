@@ -64,6 +64,11 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
                     try:
                         barcode = read.get_tag('CB')
 
+                        # simulate 3% doublets by merging barcodes
+                        if barcodes.index(barcode) < len(barcodes) * 0.03:  # asssume 3% doublets
+                            new_barcode = barcodes[len(barcodes) - barcodes.index(barcode) - 1]
+                            read.set_tag('CB', new_barcode)
+
                         # get sample id from randomly generated grouping indexes for the list of barcodes
                         sample = groups[barcodes.index(barcode)]
 
@@ -80,10 +85,10 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
 
                         # toss a biased coin using P_A to get A/R allele for the simulated read
                         if random.random() < P_A:
-                            alt_base_calls_mtx.loc[position, barcode] += 1
+                            alt_base_calls_mtx.loc[position, new_barcode] += 1
                             new = str(snv.ALT[0])  # ALT returned as list by pysam
                         else:
-                            ref_base_calls_mtx.loc[position, barcode] += 1
+                            ref_base_calls_mtx.loc[position, new_barcode] += 1
                             new = snv.REF
 
                         # update the new base to bam file
@@ -91,21 +96,6 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
                             if item[1] == (snv.POS - 1):
                                 read.query_sequence = read.query_sequence[:item[0]] + new + read.query_sequence[(item[0] + 1):]
                         out_sam.write(read)
-
-                        # simulate doublets
-                        if barcodes.index(barcode) < len(barcodes) * 0.02:  # assume 2% doublets
-                            sample = (groups[barcodes.index(barcode)] + 1 ) % num
-                            P_A = 0.5 * snv.SAMPLES[sample]['GP'][1] + snv.SAMPLES[sample]['GP'][2]
-                            if random.random() < P_A:
-                                alt_base_calls_mtx.loc[position, barcode] += 1
-                                new = str(snv.ALT[0])
-                            else:
-                                ref_base_calls_mtx.loc[position, barcode] += 1
-                                new = snv.REF
-                            for item in read.get_aligned_pairs(True):
-                                if item[1] == (snv.POS - 1):
-                                    read.query_sequence = read.query_sequence[:item[0]] + new + read.query_sequence[(item[0] + 1):]
-                            out_sam.write(read)
 
                     except:
                         pass
