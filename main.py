@@ -54,7 +54,7 @@ class models:
         irows, icols = np.array(rows), np.array(cols)
         nrows, ncols = len(rows), len(cols)
         mrows = mcols = 0
-        while (mrows < (0.9 * nrows)) or (mcols < (0.9 * ncols)):
+        while (mrows < 0.9 * nrows or mcols < 0.9 * ncols) and (nrows >= 10 or ncols >= 10):
             rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows))*nrows))))
             rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols))*ncols))))
             rows = np.count_nonzero(base_mtx, axis=1).argsort().tolist()
@@ -73,19 +73,19 @@ class models:
         pca = PCA(n_components=min(nrows, ncols, 20))
         pca_alt = pca.fit_transform(alt_pca)
         if pca_alt.shape[0] < self.num:
-            sys.exit('not enough informative cells to support model initialization')
-        kmeans = KMeans(n_clusters=self.num, random_state=0).fit(pca_alt)
-    
-        # intialise allele frequency for model states
-        self.initial = []
-        for n in range(self.num):
-            self.initial.append([])
-            for index, col in enumerate(icols):
-                if kmeans.labels_[index] == n:
-                    self.initial[n].append(self.barcodes[col])
-            barcode_alt = np.array(self.alt_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
-            barcode_ref = np.array(self.ref_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
-            self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)
+            print('not enough informative cells to support model initialization')
+        else:
+            kmeans = KMeans(n_clusters=self.num, random_state=0).fit(pca_alt)
+            # intialise allele frequency for model states
+            self.initial = []
+            for n in range(self.num):
+                self.initial.append([])
+                for index, col in enumerate(icols):
+                    if kmeans.labels_[index] == n:
+                        self.initial[n].append(self.barcodes[col])
+                barcode_alt = np.array(self.alt_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
+                barcode_ref = np.array(self.ref_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
+                self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)
 
 
     def run_EM(self):
@@ -263,11 +263,12 @@ def main():
     for i in range(30):
         with open('sc_split.log', 'a') as myfile: myfile.write('round ' + str(i) + '\n')
         model = models(base_calls_mtx, args.num)
-        model.run_EM()
-        model.assign_cells()
-        if model.sum_log_likelihood[-1] > max_likelihood:
-            max_likelihood = model.sum_log_likelihood[-1]
-            initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
+        if model.model_af.sum().sum() > 0:
+            model.run_EM()
+            model.assign_cells()
+            if model.sum_log_likelihood[-1] > max_likelihood:
+                max_likelihood = model.sum_log_likelihood[-1]
+                initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
     model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
     model.define_doublet()
     model.distinguishing_alleles()

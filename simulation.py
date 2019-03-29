@@ -85,10 +85,16 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
 
                         # toss a biased coin using P_A to get A/R allele for the simulated read
                         if random.random() < P_A:
-                            alt_base_calls_mtx.loc[position, new_barcode] += 1
+                            if barcodes.index(barcode) < len(barcodes) * 0.03:  # asssume 3% doublets
+                                alt_base_calls_mtx.loc[position, new_barcode] += 1
+                            else:
+                                alt_base_calls_mtx.loc[position, barcode] += 1
                             new = str(snv.ALT[0])  # ALT returned as list by pysam
                         else:
-                            ref_base_calls_mtx.loc[position, new_barcode] += 1
+                            if barcodes.index(barcode) < len(barcodes) * 0.03:  # asssume 3% doublets
+                                ref_base_calls_mtx.loc[position, new_barcode] += 1
+                            else:
+                                ref_base_calls_mtx.loc[position, barcode] += 1
                             new = snv.REF
 
                         # update the new base to bam file
