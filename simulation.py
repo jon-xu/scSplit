@@ -48,8 +48,8 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
         if pos not in all_POS:  # keep unique positions only (multiallelic sites affected)
             all_POS.append(pos)
 
-    in_sam = ps.AlignmentFile(file_i, 'rb')
-    out_sam = ps.AlignmentFile(file_o, 'wb', template=in_sam)
+    in_sam = ps.AlignmentFile(args.input, 'rb')
+    out_sam = ps.AlignmentFile(args.output, 'wb', template=in_sam)
 
     ref_base_calls_mtx = pd.DataFrame(0, index=all_POS, columns=barcodes)
     alt_base_calls_mtx = pd.DataFrame(0, index=all_POS, columns=barcodes)
