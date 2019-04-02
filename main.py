@@ -143,7 +143,7 @@ class models:
         """
 
         for n in range(self.num):
-            self.assigned[n] = sorted(self.P_s_c.loc[self.P_s_c[n] >= 0.9].index.values.tolist())
+            self.assigned[n] = sorted(self.P_s_c.loc[self.P_s_c[n] >= 0.99].index.values.tolist())
 
 
     def define_doublet(self):
@@ -179,8 +179,9 @@ class models:
             # REF/ALT alleles counts from cells assigned to state n
             N_ref_mtx.loc[:, n], N_alt_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1), self.alt_bc_mtx[:, bc_idx].sum(axis=1)
         # judge N(A) or N(R) for each cluster
-        alt_or_ref = (((N_alt_mtx >= 2) * 1) - ((N_ref_mtx >= 10) & (N_alt_mtx == 0) * 1)).drop(self.doublet, axis=1).astype(np.int8)
+        alt_or_ref = ((N_alt_mtx >= 2) - ((N_ref_mtx >= 10) & (N_alt_mtx == 0))).drop(self.doublet, axis=1).astype(np.int8)
         alt_or_ref[alt_or_ref == 0], alt_or_ref[alt_or_ref == -1] = float('NaN'), 0     # formatting data for further analysis
+        alt_or_ref = alt_or_ref.ix[[x for x in alt_or_ref.index if x[0] not in ['X','Y','MT']]]
 
         # find unique alleles for each column window and then merge
         while len(self.dist_alleles) < (self.num - 1):                          
