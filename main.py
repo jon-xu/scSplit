@@ -179,14 +179,16 @@ class models:
             # REF/ALT alleles counts from cells assigned to state n
             N_ref_mtx.loc[:, n], N_alt_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1), self.alt_bc_mtx[:, bc_idx].sum(axis=1)
         # judge N(A) or N(R) for each cluster
-        alt_or_ref = ((N_alt_mtx >= 2) - ((N_ref_mtx >= 10) & (N_alt_mtx == 0))).drop(self.doublet, axis=1).astype(np.int8)
+        alt_or_ref = ((N_alt_mtx >= 10) * 1 - ((N_ref_mtx >= 10) & (N_alt_mtx == 0)) * 1).drop(self.doublet, axis=1).astype(np.int8)
         alt_or_ref[alt_or_ref == 0], alt_or_ref[alt_or_ref == -1] = float('NaN'), 0     # formatting data for further analysis
         alt_or_ref = alt_or_ref.ix[[x for x in alt_or_ref.index if x[0] not in ['X','Y','MT']]]
 
+        start, ncols = 0, self.num - 1
         # find unique alleles for each column window and then merge
-        while len(self.dist_alleles) < (self.num - 1):                          
-            start, ncols, selected, least_ones = 0, self.num - 1, [], []
-            while len(least_ones) < (ncols - start + 1):                        
+        while start < ncols - 1:                          
+            least_ones = []
+            while len(least_ones) < (ncols - start):
+                selected = []                        
                 submatrix = alt_or_ref.iloc[:, start:ncols]
                 # informative alleles for the selected clusters with no NAs
                 if start < ncols: informative_sub = submatrix[(submatrix.var(axis=1) > 0) & (submatrix.count(axis=1) == submatrix.shape[1])]
@@ -194,32 +196,32 @@ class models:
                 if informative_sub.index.values.size > 0:
                     patt = informative_sub.astype(str).values.sum(axis=1)
                     unq = np.unique(patt, return_inverse=True)                  
-                    if len(unq[0]) >= (ncols - start):
-                        for j in range(len(unq[0])):
-                            # first informative alleles for each unique pattern in the cluster screen which has maximum non-NA values in original information matrix
-                            selected.append(alt_or_ref.loc[informative_sub.iloc[[i for i, x in enumerate(unq[1]) if x == j]].index].count(axis=1).idxmax())
-                        subt = alt_or_ref.loc[np.unique(selected)].iloc[:, start:ncols] 
-                        d = np.linalg.svd(subt, full_matrices=False)[1]
-                        if sum(d > 1e-10) >= (ncols - start):
-                            least_ones = [subt[subt.sum(axis=1) == min(subt.sum(axis=1))].index[0]]
-                            while len(least_ones) < (ncols - start):            # Gram-Schmidt Process
-                                svd = np.linalg.svd(subt.loc[least_ones].transpose(), full_matrices=False)
-                                U, V = svd[0], svd[2]
-                                if len(least_ones) == 1: D=np.asmatrix(svd[1])
-                                else: D = np.diag(svd[1])
-                                colU, Vinv, Dinv = U.shape[1], np.linalg.solve(V, np.diag([1]*len(V))), np.linalg.solve(D, np.diag([1]*len(D)))
-                                proj = np.asmatrix(np.zeros((colU,subt.shape[0])))
-                                for j in range(subt.shape[0]):
-                                    for i in range(colU):
-                                        proj[i, j] = np.matmul(U[:,i], subt.iloc[j])
-                                W = np.matmul(np.matmul(Vinv, Dinv), proj)
-                                R = np.matmul(subt.loc[least_ones].transpose(), W)
-                                diff = (subt.transpose() - R).transpose()
-                                subt1 = subt.loc[diff[diff.var(axis=1) > (0.5 * max(diff.var(axis=1)))].index]
-                                least_ones += [subt1[subt1.sum(axis=1) == min(subt1.sum(axis=1))].index[0]]
+                    for j in range(len(unq[0])):
+                        # first informative alleles for each unique pattern in the cluster screen which has maximum non-NA values in original information matrix
+                        selected.append(alt_or_ref.loc[informative_sub.iloc[[i for i, x in enumerate(unq[1]) if x == j]].index].count(axis=1).idxmax())
+                    subt = alt_or_ref.loc[np.unique(selected)].iloc[:, start:ncols] 
+                    d = np.linalg.svd(subt, full_matrices=False)[1]
+                    if sum(d > 1e-10) >= (ncols - start):
+                        least_ones = [subt[subt.sum(axis=1) == min(subt.sum(axis=1))].index[0]]
+                        while len(least_ones) < (ncols - start):            # Gram-Schmidt Process
+                            svd = np.linalg.svd(subt.loc[least_ones].transpose(), full_matrices=False)
+                            U, V = svd[0], svd[2]
+                            if len(least_ones) == 1: D=np.asmatrix(svd[1])
+                            else: D = np.diag(svd[1])
+                            colU, Vinv, Dinv = U.shape[1], np.linalg.solve(V, np.diag([1]*len(V))), np.linalg.solve(D, np.diag([1]*len(D)))
+                            proj = np.asmatrix(np.zeros((colU,subt.shape[0])))
+                            for j in range(subt.shape[0]):
+                                for i in range(colU):
+                                    proj[i, j] = np.matmul(U[:,i], subt.iloc[j])
+                            W = np.matmul(np.matmul(Vinv, Dinv), proj)
+                            R = np.matmul(subt.loc[least_ones].transpose(), W)
+                            diff = (subt.transpose() - R).transpose()
+                            subt1 = subt.loc[diff[diff.var(axis=1) > (0.5 * max(diff.var(axis=1)))].index]
+                            least_ones += [subt1[subt1.sum(axis=1) == min(subt1.sum(axis=1))].index[0]]
                 ncols -= 1
             self.dist_alleles += least_ones
             start = ncols + 1
+            ncols = self.num - 1
 
         self.dist_alleles = list(set(self.dist_alleles))
 
@@ -234,7 +236,11 @@ class models:
 
         # for non-covered pairs, expand to get distinguishing alleles
         for pair in todo:
-            self.dist_alleles.append(alt_or_ref[alt_or_ref.loc[:, pair].var(axis=1) > 0].index[0])
+            try:
+                new =alt_or_ref[alt_or_ref.loc[:, pair].var(axis=1) > 0].index[0]
+                self.dist_alleles.append(new)
+            except:
+                with open('sc_split.log', 'a') as myfile: myfile.write('\n not all distinguish-able! \n')
 
         self.dist_alleles = list(set(self.dist_alleles))
         self.dist_matrix = alt_or_ref.loc[self.dist_alleles]
