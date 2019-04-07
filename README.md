@@ -3,7 +3,7 @@
 #### It has been used to demultiplex up to 8 samples on 10X platform.
 
 ### How to install:
-    1) install python 3.6
+    1) install python 3.6+
     2) install python packages: numpy, math, pandas, pickle, pysam, random, scipy, sklearn, statistics, vcf
     3) git clone https://github.com/jon-xu/sc_split
 
