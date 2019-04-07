@@ -24,7 +24,7 @@
 ##### 3. Building allele count matrices
    *a) Run python script "matrices.py" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.*
    
-        -v, --vcf: VCF from mixed BAM
+        -v, --vcf, VCF from mixed BAM
         -i, --bam, mixed sample BAM        
         -b, --barcodes, barcodes whitelist        
         -r, --ref, Ref count CSV as output        
