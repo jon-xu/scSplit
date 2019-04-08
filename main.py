@@ -171,7 +171,7 @@ class models:
         """
         
         # build SNV-state matrices for ref and alt counts
-        self.dist_alleles, todo = [], []
+        self.dist_variants, todo = [], []
         N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num)), pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
 
         for n in range(self.num):
@@ -219,18 +219,18 @@ class models:
                             subt1 = subt.loc[diff[diff.var(axis=1) > (0.5 * max(diff.var(axis=1)))].index]
                             least_ones += [subt1[subt1.sum(axis=1) == min(subt1.sum(axis=1))].index[0]]
                 ncols -= 1
-            self.dist_alleles += least_ones
+            self.dist_variants += least_ones
             start = ncols + 1
             ncols = self.num - 1
 
-        self.dist_alleles = list(set(self.dist_alleles))
+        self.dist_variants = list(set(self.dist_variants))
 
         # number of rows to distinguish each cluster pair
         col_diff = pd.DataFrame(0, index=alt_or_ref.columns, columns=alt_or_ref.columns)
         for i in range(1, col_diff.shape[0]):
             for j in range(i):
                 # number of alleles that cluster i and j are different in
-                col_diff.iloc[i, j] = (alt_or_ref.loc[self.dist_alleles].iloc[:, [i, j]].var(axis=1) > 0).sum()
+                col_diff.iloc[i, j] = (alt_or_ref.loc[self.dist_variants].iloc[:, [i, j]].var(axis=1) > 0).sum()
                 if col_diff.iloc[i, j] == 0:
                     todo.append([i, j])
 
@@ -238,12 +238,12 @@ class models:
         for pair in todo:
             try:
                 new =alt_or_ref[alt_or_ref.loc[:, pair].var(axis=1) > 0].index[0]
-                self.dist_alleles.append(new)
+                self.dist_variants.append(new)
             except:
                 with open('sc_split.log', 'a') as myfile: myfile.write('\n not all distinguish-able! \n')
 
-        self.dist_alleles = list(set(self.dist_alleles))
-        self.dist_matrix = alt_or_ref.loc[self.dist_alleles]
+        self.dist_variants = list(set(self.dist_variants))
+        self.dist_matrix = alt_or_ref.loc[self.dist_variants]
 
 
 def main():
@@ -288,8 +288,8 @@ def main():
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
     model.P_s_c.to_csv('scsplit_P_s_c.csv')
-    with open('scsplit_dist_alleles.txt', 'w') as myfile:
-        for item in model.dist_alleles:
+    with open('scsplit_dist_variants.txt', 'w') as myfile:
+        for item in model.dist_variants:
             myfile.write(str(item) + '\n')
     with open('scsplit_doublet.txt', 'w') as myfile:
         myfile.write('Cluster ' + str(model.doublet) + ' is doublet.\n')
