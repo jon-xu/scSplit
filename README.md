@@ -17,8 +17,7 @@
    *c) Mark BAM file for duplication, and get it sorted and indexed, using rmdup, sort, index commands in samtools*
    
 ##### 2. Calling for single-nucleotide variants
-   *a) Use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1.  Example: freebayes -f <reference.fa> -iXu -C 2 -q 1 target.bam snv.vcf*
-   This step could take very long (up to 30 hours if not using parallel processing), GATK or other SNV calling tools might work as well.
+   *a) Use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1.  Example: freebayes -f <reference.fa> -iXu -C 2 -q 1 target.bam snv.vcf. This step could take very long (up to 30 hours if not using parallel processing), GATK or other SNV calling tools might work as well.  Users can also split the BAM by chromosome and call SNVs separately.*
    
    *b) The output VCF file will be futher filtered so that only the SNVs with quality score larger than 30 would be kept.*
 
