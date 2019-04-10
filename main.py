@@ -7,6 +7,7 @@ Aug 2018
 
 import numpy as np
 import pandas as pd
+import vcf
 import statistics as stat
 from scipy.sparse import csr_matrix
 from sklearn.cluster import KMeans
@@ -164,7 +165,7 @@ class models:
         self.doublet = result.index(max(result))
 
 
-    def distinguishing_alleles(self):
+    def distinguishing_alleles(self, pos=[]):
         """
             Locate the distinguishing alleles
             N_ref_mtx, N_alt_mtx: SNV-state matrix for ref/alt counts in each state
@@ -172,12 +173,16 @@ class models:
         
         # build SNV-state matrices for ref and alt counts
         self.dist_variants, todo = [], []
-        N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num)), pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
+        if len(pos) == 0:
+            pos = self.all_POS
+        else:
+            pos = [self.all_POS[i] for i in pos]
+        N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=pos, columns=range(self.num)), pd.DataFrame(0, index=pos, columns=range(self.num))
 
         for n in range(self.num):
             bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]
             # REF/ALT alleles counts from cells assigned to state n
-            N_ref_mtx.loc[:, n], N_alt_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1), self.alt_bc_mtx[:, bc_idx].sum(axis=1)
+            N_ref_mtx.loc[:, n], N_alt_mtx.loc[:, n] = self.ref_bc_mtx[pos][:, bc_idx].sum(axis=1), self.alt_bc_mtx[pos][:, bc_idx].sum(axis=1)
         # judge N(A) or N(R) for each cluster
         alt_or_ref = (((N_alt_mtx >= 10) & (N_ref_mtx == 0)) * 1 - ((N_ref_mtx >= 10) & (N_alt_mtx == 0)) * 1).drop(self.doublet, axis=1).astype(np.int8)
         alt_or_ref[alt_or_ref == 0], alt_or_ref[alt_or_ref == -1] = float('NaN'), 0     # formatting data for further analysis
@@ -253,6 +258,7 @@ def main():
     parser.add_argument('-r', '--ref', required=True,  help='Ref count CSV input')
     parser.add_argument('-a', '--alt', required=True,  help='Alt count CSV input')
     parser.add_argument('-n', '--num', required=True,  help='Number of mixed samples')
+    parser.add_argument('-v', '--vcf', required=False, help='vcf file for filtering distiinguishing variants')
     args = parser.parse_args()
 
     progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
@@ -278,7 +284,16 @@ def main():
                 initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
     model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
     model.define_doublet()
-    model.distinguishing_alleles()
+
+    pos = []
+    for record in vcf.Reader(open(args.vcf, 'r')):
+        # only keep high R2 variants
+        try:
+            if record.INFO['R2'] > 0.9:
+                pos.append(model.all_POS.index(str(record.CHROM)+':'+str(record.POS)))
+        except:
+            continue
+    model.distinguishing_alleles(pos)
 
     # generate outputs
     with open('scsplit_model', 'wb') as f:
