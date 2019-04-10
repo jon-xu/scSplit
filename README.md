@@ -42,6 +42,7 @@
         -r, --ref, Ref count CSV as input        
         -a, --alt, Alt count CSV as input        
         -n, --num, Number of mixed samples
+        -v, --vcf, individual genotypes to check distinguishing variants against (optional)
         
    *c) "sc_split_doublet.txt": indicating which cluster is doublet state*
    
@@ -51,7 +52,7 @@
    
    *f) "sc_split_dist_matrix.csv": the ALT alelle Presence/Absence (P/A) matrix as a reference in assigning sasmple to clusters*
    
-   *g) "model.found", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)*
+   *g) "sc_split.model", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)*
    
    *h) "sc_split.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
 
