@@ -49,7 +49,7 @@ class models:
         N_T = N_A + N_R
         k_ref,  k_alt = N_R / N_T, N_A / N_T
 
-        # find barcodes for state initialisation, using subsetting/PCA/K-mean
+        # find barcodes for state initialization, using subsetting/PCA/K-mean
         base_mtx = (self.alt_bc_mtx + self.ref_bc_mtx).toarray()
         rows, cols = [*range(base_mtx.shape[0])], [*range(base_mtx.shape[1])]
         irows, icols = np.array(rows), np.array(cols)
@@ -97,7 +97,7 @@ class models:
         while self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]:
             iterations += 1
             progress = 'Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
-            with open('sc_split.log', 'a') as myfile: myfile.write(progress)
+            with open('scSplit.log', 'a') as myfile: myfile.write(progress)
             self.calculate_cell_likelihood()  # E-step
             self.calculate_model_af()  # M-step
             self.sum_log_likelihood.append(self.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], LL = Sum_c{log[Sum_s(P(c|s))]}
@@ -245,7 +245,7 @@ class models:
                 new =alt_or_ref[alt_or_ref.loc[:, pair].var(axis=1) > 0].index[0]
                 self.dist_variants.append(new)
             except:
-                with open('sc_split.log', 'a') as myfile: myfile.write('\n not all distinguish-able! \n')
+                with open('scSplit.log', 'a') as myfile: myfile.write('\n not all distinguish-able! \n')
 
         self.dist_variants = list(set(self.dist_variants))
         self.dist_matrix = alt_or_ref.loc[self.dist_variants]
@@ -262,7 +262,7 @@ def main():
     args = parser.parse_args()
 
     progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
-    with open('sc_split.log', 'a') as myfile: myfile.write(progress)
+    with open('scSplit.log', 'a') as myfile: myfile.write(progress)
 
     # Read in existing matrix from the csv files
     ref = pd.read_csv(args.ref, header=0, index_col=0)
@@ -270,11 +270,12 @@ def main():
     ref_s, alt_s = csr_matrix(ref.values), csr_matrix(alt.values)
     base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
     progress = 'AF matrices uploaded: ' + str(datetime.datetime.now()) + '\n'
-    with open('sc_split.log', 'a') as myfile: myfile.write(progress)
+    with open('scSplit.log', 'a') as myfile: myfile.write(progress)
 
     max_likelihood = -1e10
     for i in range(30):
-        with open('sc_split.log', 'a') as myfile: myfile.write('round ' + str(i) + '\n')
+        with open('scSplit.log', 'a') as myfile: myfile.write('round ' + str(i) + '\n')
+
         model = models(base_calls_mtx, args.num)
         if model.model_af.sum().sum() > 0:
             model.run_EM()
@@ -296,19 +297,19 @@ def main():
     model.distinguishing_alleles(pos)
 
     # generate outputs
-    with open('scsplit_model', 'wb') as f:
+    with open('scSplit_model', 'wb') as f:
         pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
     for n in range(int(args.num)+1):
-        with open('scsplit_barcodes_{}.csv'.format(n), 'w') as myfile:
+        with open('scSplit_barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in model.assigned[n]:
                 myfile.write(str(item) + '\n')
-    model.P_s_c.to_csv('scsplit_P_s_c.csv')
-    with open('scsplit_dist_variants.txt', 'w') as myfile:
+    model.P_s_c.to_csv('scSplit_P_s_c.csv')
+    with open('scSplit_dist_variants.txt', 'w') as myfile:
         for item in model.dist_variants:
             myfile.write(str(item) + '\n')
-    with open('scsplit_doublet.txt', 'w') as myfile:
+    with open('scSplit_doublet.txt', 'w') as myfile:
         myfile.write('Cluster ' + str(model.doublet) + ' is doublet.\n')
-    model.dist_matrix.to_csv('scsplit_dist_matrix.csv')
+    model.dist_matrix.to_csv('scSplit_dist_matrix.csv')
 
 
 if __name__ == '__main__':
