@@ -37,9 +37,10 @@ class models:
         self.num = int(num) + 1  # additional doublet state
         self.P_s_c = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
-        self.assigned = []
+        self.assigned, self.reassigned = [], []
         for _ in range(self.num):
             self.assigned.append([])
+            self.reassigned.append([])
         self.model_af = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         self.pseudo = 1
 
@@ -165,6 +166,26 @@ class models:
         self.doublet = result.index(max(result))
 
 
+    def adjust_doublets(self):
+        """
+            Find falsely assigned doublets
+        """
+        N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num)), pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
+        found = []
+        self.reassigned[self.doublet] = self.assigned[self.doublet]
+        for n in range(self.num):
+            bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]
+            # REF/ALT alleles counts from cells assigned to state n
+            N_ref_mtx.loc[:, n], N_alt_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1), self.alt_bc_mtx[:, bc_idx].sum(axis=1)
+        read_depth = self.alt_bc_mtx.T.dot(np.int64((N_alt_mtx > 0) | (N_ref_mtx > 0))) * (self.P_s_c >= 0.99)
+        for n in range(self.num):
+            if n != self.doublet:
+                count = np.count_nonzero(read_depth[n])
+                found = read_depth.index[read_depth[n].argsort()[int((len(read_depth.index) - count * 0.05)) : len(read_depth.index)]]
+                self.reassigned[self.doublet] += found.tolist()
+                self.reassigned[n] = [x for x in self.assigned[n] if x not in found]
+
+
     def distinguishing_alleles(self, pos=[]):
         """
             Locate the distinguishing alleles
@@ -173,16 +194,20 @@ class models:
         
         # build SNV-state matrices for ref and alt counts
         self.dist_variants, todo = [], []
-        if len(pos) == 0:
-            pos = self.all_POS
-        else:
+        if len(pos) != 0:
             pos = [self.all_POS[i] for i in pos]
-        N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=pos, columns=range(self.num)), pd.DataFrame(0, index=pos, columns=range(self.num))
+            N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=pos, columns=range(self.num)), pd.DataFrame(0, index=pos, columns=range(self.num))
+        else:
+            N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num)), pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
 
         for n in range(self.num):
-            bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]
+            bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.reassigned[n]]
             # REF/ALT alleles counts from cells assigned to state n
-            N_ref_mtx.loc[:, n], N_alt_mtx.loc[:, n] = self.ref_bc_mtx[pos][:, bc_idx].sum(axis=1), self.alt_bc_mtx[pos][:, bc_idx].sum(axis=1)
+            if len(pos) == 0:
+                N_ref_mtx.loc[:, n], N_alt_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1), self.alt_bc_mtx[:, bc_idx].sum(axis=1)
+            else:
+                N_ref_mtx.loc[:, n], N_alt_mtx.loc[:, n] = self.ref_bc_mtx[pos][:, bc_idx].sum(axis=1), self.alt_bc_mtx[pos][:, bc_idx].sum(axis=1)
+
         # judge N(A) or N(R) for each cluster
         alt_or_ref = (((N_alt_mtx >= 10) & (N_ref_mtx == 0)) * 1 - ((N_ref_mtx >= 10) & (N_alt_mtx == 0)) * 1).drop(self.doublet, axis=1).astype(np.int8)
         alt_or_ref[alt_or_ref == 0], alt_or_ref[alt_or_ref == -1] = float('NaN'), 0     # formatting data for further analysis
@@ -285,15 +310,20 @@ def main():
                 initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
     model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
     model.define_doublet()
+    model.adjust_doublets()
 
     pos = []
-    for record in vcf.Reader(open(args.vcf, 'r')):
-        # only keep high R2 variants
-        try:
-            if record.INFO['R2'] > 0.9:
-                pos.append(model.all_POS.index(str(record.CHROM)+':'+str(record.POS)))
-        except:
-            continue
+    try:
+        for record in vcf.Reader(open(args.vcf, 'r')):
+            # only keep high R2 variants
+            try:
+                if record.INFO['R2'] > 0.9:
+                    pos.append(model.all_POS.index(str(record.CHROM)+':'+str(record.POS)))
+            except:
+                continue
+    except:
+        pass
+        
     model.distinguishing_alleles(pos)
 
     # generate outputs
@@ -301,7 +331,7 @@ def main():
         pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
     for n in range(int(args.num)+1):
         with open('scSplit_barcodes_{}.csv'.format(n), 'w') as myfile:
-            for item in model.assigned[n]:
+            for item in model.reassigned[n]:
                 myfile.write(str(item) + '\n')
     model.P_s_c.to_csv('scSplit_P_s_c.csv')
     with open('scSplit_dist_variants.txt', 'w') as myfile:
