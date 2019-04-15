@@ -101,7 +101,7 @@ class models:
             with open('scSplit.log', 'a') as myfile: myfile.write(progress)
             self.calculate_cell_likelihood()  # E-step
             self.calculate_model_af()  # M-step
-            self.sum_log_likelihood.append(self.lP_c_s.max(axis=1).sum())  # L = Prod_c[Sum_s(P(c|s))], LL = Sum_c{log[Sum_s(P(c|s))]}
+            self.sum_log_likelihood.append(self.lP_c_m)
 
 
     def calculate_cell_likelihood(self):
@@ -125,6 +125,9 @@ class models:
             for j in range(self.num):
                 denom += 2 ** (self.lP_c_s.loc[:, j] - self.lP_c_s.loc[:, i])
             self.P_s_c.loc[:, i] = 1 / denom
+
+        # calculate model likelihood: logP(x|theta) = log{Sigma_yP(x,y|theta)}
+        self.lP_c_m = ((self.lP_c_s.subtract(self.lP_c_s.min(axis=1), axis=0).pow(2).sum(axis=1) + 1).apply(np.log2) + self.lP_c_s.min(axis=1)).sum(axis=0)
 
 
     def calculate_model_af(self):
@@ -166,7 +169,7 @@ class models:
         self.doublet = result.index(max(result))
 
 
-    def adjust_doublets(self):
+    def refine_doublets(self):
         """
             Find falsely assigned doublets
         """
@@ -294,7 +297,7 @@ def main():
     alt = pd.read_csv(args.alt, header=0, index_col=0)
     ref_s, alt_s = csr_matrix(ref.values), csr_matrix(alt.values)
     base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
-    progress = 'AF matrices uploaded: ' + str(datetime.datetime.now()) + '\n'
+    progress = 'Allele counts matrices uploaded: ' + str(datetime.datetime.now()) + '\n'
     with open('scSplit.log', 'a') as myfile: myfile.write(progress)
 
     max_likelihood = -1e10
@@ -310,7 +313,7 @@ def main():
                 initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
     model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
     model.define_doublet()
-    model.adjust_doublets()
+    model.refine_doublets()
 
     pos = []
     try:
