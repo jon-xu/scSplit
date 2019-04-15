@@ -198,8 +198,8 @@ class models:
         # build SNV-state matrices for ref and alt counts
         self.dist_variants, todo = [], []
         if len(pos) != 0:
-            pos = [self.all_POS[i] for i in pos]
-            N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=pos, columns=range(self.num)), pd.DataFrame(0, index=pos, columns=range(self.num))
+            snv = [self.all_POS[i] for i in pos]
+            N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=snv, columns=range(self.num)), pd.DataFrame(0, index=snv, columns=range(self.num))
         else:
             N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num)), pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
 
@@ -320,7 +320,7 @@ def main():
         for record in vcf.Reader(open(args.vcf, 'r')):
             # only keep high R2 variants
             try:
-                if record.INFO['R2'] > 0.9:
+                if float(record.INFO['R2'][0]) > 0.9:
                     pos.append(model.all_POS.index(str(record.CHROM)+':'+str(record.POS)))
             except:
                 continue
