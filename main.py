@@ -175,7 +175,7 @@ class models:
         """
         N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num)), pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         found = []
-        self.reassigned[self.doublet] = self.assigned[self.doublet]
+        self.reassigned[self.doublet] = self.assigned[self.doublet].copy()
         for n in range(self.num):
             bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]
             # REF/ALT alleles counts from cells assigned to state n
