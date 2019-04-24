@@ -16,7 +16,7 @@ from sklearn.preprocessing import StandardScaler
 import datetime, pickle, argparse
 
 class models:
-    def __init__(self, base_calls_mtx, num):
+    def __init__(self, base_calls_mtx, num, doublets):
         """
         Model class containing SNVs, matrices counts, barcodes, model allele fraction with assigned cells
 
@@ -34,7 +34,8 @@ class models:
         """
         self.ref_bc_mtx, self.alt_bc_mtx = base_calls_mtx[0], base_calls_mtx[1]
         self.all_POS, self.barcodes = base_calls_mtx[2].tolist(), base_calls_mtx[3].tolist()
-        self.num = int(num) + 1  # additional doublet state
+        self.doublets = doublets
+        self.num = num
         self.P_s_c = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.assigned, self.reassigned = [], []
@@ -169,24 +170,28 @@ class models:
         self.doublet = result.index(max(result))
 
 
-    def refine_doublets(self):
+    def refine_doublets(self, doublets):
         """
             Find falsely assigned doublets
         """
         N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num)), pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         found = []
-        self.reassigned[self.doublet] = self.assigned[self.doublet].copy()
+        self.reassigned = self.assigned.copy()
         for n in range(self.num):
             bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]
             # REF/ALT alleles counts from cells assigned to state n
             N_ref_mtx.loc[:, n], N_alt_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1), self.alt_bc_mtx[:, bc_idx].sum(axis=1)
-        read_depth = self.alt_bc_mtx.T.dot(np.int64((N_alt_mtx > 0) | (N_ref_mtx > 0))) * (self.P_s_c >= 0.99)
-        for n in range(self.num):
-            if n != self.doublet:
-                count = np.count_nonzero(read_depth[n])
-                found = read_depth.index[read_depth[n].argsort()[int((len(read_depth.index) - count * 0.05)) : len(read_depth.index)]]
-                self.reassigned[self.doublet] += found.tolist()
-                self.reassigned[n] = [x for x in self.assigned[n] if x not in found]
+        # get read depth of cell by state
+        rps = self.alt_bc_mtx.T.dot(np.int64((N_alt_mtx > 0) | (N_ref_mtx > 0))) * (self.P_s_c >= 0.99)
+        rpc = rps.drop(self.doublet, axis=1)
+        lack = len(self.barcodes) * doublets - len(self.assigned[self.doublet])
+        if lack > 0:
+            found = rpc.index[rpc.sum(axis=1).argsort()[int(len(rpc.index) - lack):len(rpc.index)]]
+            for n in range(self.num):
+                if n != self.doublet:
+                    self.reassigned[n] = [x for x in self.assigned[n] if x not in found]
+                else:
+                    self.reassigned[n] += found.tolist()
 
 
     def distinguishing_alleles(self, pos=[]):
@@ -286,8 +291,19 @@ def main():
     parser.add_argument('-r', '--ref', required=True,  help='Ref count CSV input')
     parser.add_argument('-a', '--alt', required=True,  help='Alt count CSV input')
     parser.add_argument('-n', '--num', required=True,  help='Number of mixed samples')
+    parser.add_argument('-d', '--doublets', required=False, help='Doublet proportion [0.05]')
     parser.add_argument('-v', '--vcf', required=False, help='vcf file for filtering distiinguishing variants')
     args = parser.parse_args()
+
+    try:
+        doublets = float(args.doublets)
+    except:
+        doublets = 0.05
+
+    if doublets == 0:
+        num = args.num
+    else:
+        num = args.num + 1  # additional doublet state
 
     progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
     with open('scSplit.log', 'a') as myfile: myfile.write(progress)
@@ -304,7 +320,7 @@ def main():
     for i in range(30):
         with open('scSplit.log', 'a') as myfile: myfile.write('round ' + str(i) + '\n')
 
-        model = models(base_calls_mtx, args.num)
+        model = models(base_calls_mtx, int(num), doublets)
         if model.model_af.sum().sum() > 0:
             model.run_EM()
             model.assign_cells()
@@ -312,8 +328,9 @@ def main():
                 max_likelihood = model.lP_c_s.max(axis=1).sum()
                 initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
     model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
+
     model.define_doublet()
-    model.refine_doublets()
+    model.refine_doublets(doublets)
 
     pos = []
     try:
@@ -332,7 +349,7 @@ def main():
     # generate outputs
     with open('scSplit_model', 'wb') as f:
         pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
-    for n in range(int(args.num)+1):
+    for n in range(int(num)):
         with open('scSplit_barcodes_{}.csv'.format(n), 'w') as myfile:
             for item in model.reassigned[n]:
                 myfile.write(str(item) + '\n')
@@ -341,7 +358,10 @@ def main():
         for item in model.dist_variants:
             myfile.write(str(item) + '\n')
     with open('scSplit_doublet.txt', 'w') as myfile:
-        myfile.write('Cluster ' + str(model.doublet) + ' is doublet.\n')
+        if doublets > 0:
+            myfile.write('Cluster ' + str(model.doublet) + ' is doublet. \n')
+        else:
+            myfile.write('No doublet cluster expected. \n')
     model.dist_matrix.to_csv('scSplit_dist_matrix.csv')
 
 
