@@ -201,7 +201,7 @@ class models:
         """
         
         # build SNV-state matrices for ref and alt counts
-        self.dist_variants, todo = [], []
+        self.dist_variants, ncols = [], self.num - 1
         if len(pos) != 0:
             snv = [self.all_POS[i] for i in pos]
             N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=snv, columns=range(self.num)), pd.DataFrame(0, index=snv, columns=range(self.num))
@@ -220,31 +220,30 @@ class models:
         alt_or_ref = ((N_alt_mtx >= 10) * 1 - ((N_ref_mtx >= 10) & (N_alt_mtx == 0)) * 1).drop(self.doublet, axis=1).astype(np.int8)
         alt_or_ref[alt_or_ref == 0], alt_or_ref[alt_or_ref == -1] = float('NaN'), 0     # formatting data for further analysis
         alt_or_ref = alt_or_ref.ix[[x for x in alt_or_ref.index if x[0] not in ['X','Y','MT']]]
-
-        start, ncols = 0, self.num - 1
+        submatrix = alt_or_ref.copy()
+        
         # find unique alleles for each column window and then merge
-        while start < ncols - 1:                          
-            least_ones = []
-            while len(least_ones) < (ncols - start):
-                selected = []                        
-                submatrix = alt_or_ref.iloc[:, start:ncols]
+        while len(self.dist_variants) < self.num - 1:                          
+            found, todo = [], []
+            while len(found) < ncols - 1:
+                selected = []
                 # informative alleles for the selected clusters with no NAs
-                if start < ncols: informative_sub = submatrix[(submatrix.var(axis=1) > 0) & (submatrix.count(axis=1) == submatrix.shape[1])]
-                else: informative_sub = submatrix[submatrix.count(axis=1) == submatrix.shape[1]]
+                informative_sub = submatrix[(submatrix.var(axis=1) > 0) & (submatrix.count(axis=1) == ncols)]
                 if informative_sub.index.values.size > 0:
                     patt = informative_sub.astype(str).values.sum(axis=1)
                     unq = np.unique(patt, return_inverse=True)                  
                     for j in range(len(unq[0])):
                         # first informative alleles for each unique pattern in the cluster screen which has maximum non-NA values in original information matrix
                         selected.append(alt_or_ref.loc[informative_sub.iloc[[i for i, x in enumerate(unq[1]) if x == j]].index].count(axis=1).idxmax())
-                    subt = alt_or_ref.loc[np.unique(selected)].iloc[:, start:ncols] 
+                    subt = submatrix.loc[np.unique(selected)].iloc[:, 0:ncols]
+                    subt[subt.isna()]=-1
                     d = np.linalg.svd(subt, full_matrices=False)[1]
-                    if sum(d > 1e-10) >= (ncols - start):
-                        least_ones = [subt[subt.sum(axis=1) == min(subt.sum(axis=1))].index[0]]
-                        while len(least_ones) < (ncols - start):            # Gram-Schmidt Process
-                            svd = np.linalg.svd(subt.loc[least_ones].transpose(), full_matrices=False)
+                    if sum(d>1e-10) >= ncols:
+                        found = [subt[subt.sum(axis=1) == min(subt.sum(axis=1))].index[0]]
+                        while len(found) < ncols:            # Gram-Schmidt Process
+                            svd = np.linalg.svd(subt.loc[found].transpose(), full_matrices=False)
                             U, V = svd[0], svd[2]
-                            if len(least_ones) == 1: D=np.asmatrix(svd[1])
+                            if len(found) == 1: D=np.asmatrix(svd[1])
                             else: D = np.diag(svd[1])
                             colU, Vinv, Dinv = U.shape[1], np.linalg.solve(V, np.diag([1]*len(V))), np.linalg.solve(D, np.diag([1]*len(D)))
                             proj = np.asmatrix(np.zeros((colU,subt.shape[0])))
@@ -252,33 +251,24 @@ class models:
                                 for i in range(colU):
                                     proj[i, j] = np.matmul(U[:,i], subt.iloc[j])
                             W = np.matmul(np.matmul(Vinv, Dinv), proj)
-                            R = np.matmul(subt.loc[least_ones].transpose(), W)
+                            R = np.matmul(subt.loc[found].transpose(), W)
                             diff = (subt.transpose() - R).transpose()
                             subt1 = subt.loc[diff[diff.var(axis=1) > (0.5 * max(diff.var(axis=1)))].index]
-                            least_ones += [subt1[subt1.sum(axis=1) == min(subt1.sum(axis=1))].index[0]]
+                            found += [subt1[subt1.sum(axis=1) == min(subt1.sum(axis=1))].index[0]]
                 ncols -= 1
-            self.dist_variants += least_ones
-            start = ncols + 1
-            ncols = self.num - 1
-
-        self.dist_variants = list(set(self.dist_variants))
-
-        # number of rows to distinguish each cluster pair
-        col_diff = pd.DataFrame(0, index=alt_or_ref.columns, columns=alt_or_ref.columns)
-        for i in range(1, col_diff.shape[0]):
-            for j in range(i):
-                # number of alleles that cluster i and j are different in
-                col_diff.iloc[i, j] = (alt_or_ref.loc[self.dist_variants].iloc[:, [i, j]].var(axis=1) > 0).sum()
-                if col_diff.iloc[i, j] == 0:
-                    todo.append([i, j])
-
-        # for non-covered pairs, expand to get distinguishing alleles
-        for pair in todo:
-            try:
-                new =alt_or_ref[alt_or_ref.loc[:, pair].var(axis=1) > 0].index[0]
-                self.dist_variants.append(new)
-            except:
-                with open('scSplit.log', 'a') as myfile: myfile.write('\n not all distinguish-able! \n')
+                submatrix = submatrix.iloc[:, 0:ncols]
+            self.dist_variants += found
+            if len(found) == 0:
+                with open('scSplit_dist_variants.txt', 'w') as myfile:
+                    myfile.write('Not all clusters can be distinguished. \n')
+                break
+            # find indistinguishable clusters to form new submatrix
+            for i in range(1, len(alt_or_ref.columns)):
+                for j in range(i):
+                    if (alt_or_ref.loc[self.dist_variants].iloc[:, [i, j]].var(axis=1)).sum() == 0:
+                        todo.extend([i, j])
+            submatrix = alt_or_ref.iloc[:, sorted(set(todo))]
+            ncols = len(submatrix.columns)
 
         self.dist_variants = list(set(self.dist_variants))
         self.dist_matrix = alt_or_ref.loc[self.dist_variants]
