@@ -177,21 +177,22 @@ class models:
         N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num)), pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         found = []
         self.reassigned = self.assigned.copy()
-        for n in range(self.num):
-            bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]
-            # REF/ALT alleles counts from cells assigned to state n
-            N_ref_mtx.loc[:, n], N_alt_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1), self.alt_bc_mtx[:, bc_idx].sum(axis=1)
-        # get read depth of cell by state
-        rps = self.alt_bc_mtx.T.dot(np.int64((N_alt_mtx > 0) | (N_ref_mtx > 0))) * (self.P_s_c >= 0.99)
-        rpc = rps.drop(self.doublet, axis=1)
-        lack = len(self.barcodes) * doublets - len(self.assigned[self.doublet])
-        if lack > 0:
-            found = rpc.index[rpc.sum(axis=1).argsort()[int(len(rpc.index) - lack):len(rpc.index)]]
+        if doublets > 0:
             for n in range(self.num):
-                if n != self.doublet:
-                    self.reassigned[n] = [x for x in self.assigned[n] if x not in found]
-                else:
-                    self.reassigned[n] += found.tolist()
+                bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]
+                # REF/ALT alleles counts from cells assigned to state n
+                N_ref_mtx.loc[:, n], N_alt_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1), self.alt_bc_mtx[:, bc_idx].sum(axis=1)
+            # get read depth of cell by state
+            rps = self.alt_bc_mtx.T.dot(np.int64((N_alt_mtx > 0) | (N_ref_mtx > 0))) * (self.P_s_c >= 0.99)
+            rpc = rps.drop(self.doublet, axis=1)
+            lack = len(self.barcodes) * doublets - len(self.assigned[self.doublet])
+            if lack > 0:
+                found = rpc.index[rpc.sum(axis=1).argsort()[int(len(rpc.index) - lack):len(rpc.index)]]
+                for n in range(self.num):
+                    if n != self.doublet:
+                        self.reassigned[n] = [x for x in self.assigned[n] if x not in found]
+                    else:
+                        self.reassigned[n] += found.tolist()
 
 
     def distinguishing_alleles(self, pos=[]):
@@ -288,7 +289,7 @@ def main():
     try:
         doublets = float(args.doublets)
     except:
-        doublets = 0.05
+        doublets = -1
 
     if doublets == 0:
         num = args.num
