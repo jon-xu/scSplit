@@ -64,11 +64,6 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
                     try:
                         barcode = read.get_tag('CB')
 
-                        # simulate 3% doublets by merging barcodes
-                        if barcodes.index(barcode) < len(barcodes) * 0.03:  # asssume 3% doublets
-                            new_barcode = barcodes[len(barcodes) - barcodes.index(barcode) - 1]
-                            read.set_tag('CB', new_barcode)
-
                         # get sample id from randomly generated grouping indexes for the list of barcodes
                         sample = groups[barcodes.index(barcode)]
 
@@ -85,16 +80,10 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
 
                         # toss a biased coin using P_A to get A/R allele for the simulated read
                         if random.random() < P_A:
-                            if barcodes.index(barcode) < len(barcodes) * 0.03:  # asssume 3% doublets
-                                alt_base_calls_mtx.loc[position, new_barcode] += 1
-                            else:
-                                alt_base_calls_mtx.loc[position, barcode] += 1
+                            alt_base_calls_mtx.loc[position, barcode] += 1
                             new = str(snv.ALT[0])  # ALT returned as list by pysam
                         else:
-                            if barcodes.index(barcode) < len(barcodes) * 0.03:  # asssume 3% doublets
-                                ref_base_calls_mtx.loc[position, new_barcode] += 1
-                            else:
-                                ref_base_calls_mtx.loc[position, barcode] += 1
+                            ref_base_calls_mtx.loc[position, barcode] += 1
                             new = snv.REF
 
                         # update the new base to bam file
@@ -139,7 +128,7 @@ def main():
     for line in open(args.barcodes, 'r'):
         barcodes.append(line.strip())
 
-    base_calls_mtx = simulate_base_calls_matrix(args.input, args.output, all_SNVs, args.barcodes, args.num)
+    base_calls_mtx = simulate_base_calls_matrix(args.input, args.output, all_SNVs, barcodes, args.num)
     base_calls_mtx[0].to_csv('{}'.format(args.ref))
     base_calls_mtx[1].to_csv('{}'.format(args.alt))
 
