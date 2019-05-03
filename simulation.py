@@ -36,6 +36,7 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
 
     # randomly put all barcodes into the groups
     groups = [random.randint(0, num-1) for item in range(len(barcodes))]
+    doublets = []
 
     # output randomly assigned cell groups
     with open('bc_groups.txt', 'w+') as myfile:
@@ -49,7 +50,7 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
             all_POS.append(pos)
 
     in_sam = ps.AlignmentFile(file_i, 'rb')
-    out_sam = ps.AlignmentFile(file_o, 'wb', template=in_sam)
+    # out_sam = ps.AlignmentFile(file_o, 'wb', template=in_sam)
 
     ref_base_calls_mtx = pd.DataFrame(0, index=all_POS, columns=barcodes)
     alt_base_calls_mtx = pd.DataFrame(0, index=all_POS, columns=barcodes)
@@ -81,29 +82,36 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
                         # toss a biased coin using P_A to get A/R allele for the simulated read
                         if random.random() < P_A:
                             alt_base_calls_mtx.loc[position, barcode] += 1
-                            new = str(snv.ALT[0])  # ALT returned as list by pysam
+                            # new = str(snv.ALT[0])  # ALT returned as list by pysam
                         else:
                             ref_base_calls_mtx.loc[position, barcode] += 1
-                            new = snv.REF
+                            # new = snv.REF
 
                         # update the new base to bam file
-                        for item in read.get_aligned_pairs(True):
-                            if item[1] == (snv.POS - 1):
-                                read.query_sequence = read.query_sequence[:item[0]] + new + read.query_sequence[(item[0] + 1):]
-                        out_sam.write(read)
+                        # for item in read.get_aligned_pairs(True):
+                        #     if item[1] == (snv.POS - 1):
+                        #         read.query_sequence = read.query_sequence[:item[0]] + new + read.query_sequence[(item[0] + 1):]
+                        # out_sam.write(read)
+
+                        # simulate doublets
+                        if barcodes.index(barcode) < len(barcodes) * 0.03:  # assume 3% doublets
+                            newtag = barcodes[len(barcodes) - barcodes.index(barcode) - 1]
+                            alt_base_calls_mtx.loc[position, newtag] += 1
+                            ref_base_calls_mtx.loc[position, newtag] += 1
+                            doublets.append(newtag)
 
                     except:
                         pass
                 
-                else:
-                    out_sam.write(read)
+            #     else:
+            #         out_sam.write(read)
             
-            else:
-                out_sam.write(read)
+            # else:
+            #     out_sam.write(read)
 
     ref_base_calls_mtx.index.name = alt_base_calls_mtx.index.name = 'SNV'
 
-    return (ref_base_calls_mtx, alt_base_calls_mtx)
+    return (ref_base_calls_mtx, alt_base_calls_mtx, doublets)
 
 
 def main():
@@ -131,6 +139,11 @@ def main():
     base_calls_mtx = simulate_base_calls_matrix(args.input, args.output, all_SNVs, barcodes, args.num)
     base_calls_mtx[0].to_csv('{}'.format(args.ref))
     base_calls_mtx[1].to_csv('{}'.format(args.alt))
+
+    myfile = open('doublets.txt', 'w+')
+    for item in list(set(base_calls_mtx[2])):
+        myfile.write(item + '\n')
+    myfile.close()
 
 if __name__ == '__main__':
     main()
