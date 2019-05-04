@@ -36,7 +36,7 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
 
     # randomly put all barcodes into the groups
     groups = [random.randint(0, num-1) for item in range(len(barcodes))]
-    doublets = []
+    doublets, remove = [], []
 
     # output randomly assigned cell groups
     with open('bc_groups.txt', 'w+') as myfile:
@@ -99,6 +99,7 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
                             alt_base_calls_mtx.loc[position, newtag] += 1
                             ref_base_calls_mtx.loc[position, newtag] += 1
                             doublets.append(newtag)
+                            remove.append(barcode)
 
                     except:
                         pass
@@ -111,7 +112,7 @@ def simulate_base_calls_matrix(file_i, file_o, all_SNVs, barcodes, num):
 
     ref_base_calls_mtx.index.name = alt_base_calls_mtx.index.name = 'SNV'
 
-    return (ref_base_calls_mtx, alt_base_calls_mtx, doublets)
+    return (ref_base_calls_mtx.drop(remove, axis=1), alt_base_calls_mtx.drop(remove, axis=1), doublets)
 
 
 def main():

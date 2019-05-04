@@ -292,9 +292,9 @@ def main():
         doublets = -1
 
     if doublets == 0:
-        num = args.num
+        num = int(args.num)
     else:
-        num = args.num + 1  # additional doublet state
+        num = int(args.num) + 1  # additional doublet state
 
     progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
     with open('scSplit.log', 'a') as myfile: myfile.write(progress)
