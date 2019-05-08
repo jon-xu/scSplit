@@ -349,10 +349,10 @@ def main():
         for item in model.dist_variants:
             myfile.write(str(item) + '\n')
     with open('scSplit_doublet.txt', 'w') as myfile:
-        if doublets > 0:
-            myfile.write('Cluster ' + str(model.doublet) + ' is doublet. \n')
-        else:
+        if doublets == 0:
             myfile.write('No doublet cluster expected. \n')
+        else:
+            myfile.write('Cluster ' + str(model.doublet) + ' is doublet. \n')
     model.dist_matrix.to_csv('scSplit_dist_matrix.csv')
 
 
