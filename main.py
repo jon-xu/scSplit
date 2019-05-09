@@ -100,8 +100,8 @@ class models:
             iterations += 1
             progress = 'Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
             with open('scSplit.log', 'a') as myfile: myfile.write(progress)
-            self.calculate_cell_likelihood()  # E-step
-            self.calculate_model_af()  # M-step
+            self.calculate_cell_likelihood()
+            self.calculate_model_af()
             self.sum_log_likelihood.append(self.lP_c_m)
 
 
