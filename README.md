@@ -1,11 +1,11 @@
-# sc_split
+# scSplit
 ### Genotype-free demultiplexing of pooled single-cell RNAseq, using a hidden state model for identifying genetically distinct samples within a mixed population.  
 #### It has been used to demultiplex up to 8 samples on 10X platform.
 
 ### How to install:
     1) install python 3.6+
     2) install python packages: numpy, math, pandas, pickle, pysam, random, scipy, sklearn, statistics, vcf
-    3) git clone https://github.com/jon-xu/sc_split
+    3) git clone https://github.com/jon-xu/scSplit
 
 ### How to run the toolset:
 
@@ -44,17 +44,17 @@
         -n, --num, Number of mixed samples
         -v, --vcf, individual genotypes to check distinguishing variants against (optional)
         
-   *c) "sc_split_doublet.txt": indicating which cluster is doublet state*
+   *c) "scSplit_doublet.txt": indicating which cluster is doublet state*
    
-   *d) "sc_split_barcodes_{n}.csv": N+1 indicating barcodes assigned to each of the N+1 samples (including doublet state)*
+   *d) "scSplit_barcodes_{n}.csv": N+1 indicating barcodes assigned to each of the N+1 samples (including doublet state)*
    
-   *e) "sc_split_dist_alleles.txt": the distinguishing alleles that can be used to genotype and assign sample to clusters*
+   *e) "scSplit_dist_alleles.txt": the distinguishing alleles that can be used to genotype and assign sample to clusters*
    
-   *f) "sc_split_dist_matrix.csv": the ALT alelle Presence/Absence (P/A) matrix as a reference in assigning sasmple to clusters*
+   *f) "scSplit_dist_matrix.csv": the ALT alelle Presence/Absence (P/A) matrix as a reference in assigning sasmple to clusters*
    
-   *g) "sc_split.model", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)*
+   *g) "scSplit.model", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)*
    
-   *h) "sc_split.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
+   *h) "scSplit.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
 
 ##### 5. Generate genotypes based on the split result
    *a) Run python script "genotype.py"*
@@ -63,8 +63,8 @@
         -a, --alt, Alt count CSV as output
         -p, --psc, generated P(S|C)
         
-   *b) VCF file ("sc_split.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.*
+   *b) VCF file ("scSplit.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.*
 
 <br/>
 
-![alt text](https://github.com/jon-xu/sc_split/blob/master/man/figure1_pipeline.png)
+![alt text](https://github.com/jon-xu/scSplit/blob/master/man/figure1_pipeline.png)
