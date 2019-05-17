@@ -177,13 +177,13 @@ class models:
         N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num)), pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         found = []
         self.reassigned = self.assigned.copy()
-        if doublets > 0:
+        if doublets > 0: # if user has set expectation on doublet proportion, otherwise go with default doublet detection
             for n in range(self.num):
                 bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]
                 # REF/ALT alleles counts from cells assigned to state n
                 N_ref_mtx.loc[:, n], N_alt_mtx.loc[:, n] = self.ref_bc_mtx[:, bc_idx].sum(axis=1), self.alt_bc_mtx[:, bc_idx].sum(axis=1)
-            # get read depth of cell by state
-            rps = self.alt_bc_mtx.T.dot(np.int64((N_alt_mtx > 0) | (N_ref_mtx > 0))) * (self.P_s_c >= 0.99)
+            # get total non zero variants per state
+            rps = self.alt_bc_mtx.T.dot(1 - self.model_af) * (self.P_s_c >= 0.99)
             rpc = rps.drop(self.doublet, axis=1)
             lack = len(self.barcodes) * doublets - len(self.assigned[self.doublet])
             if lack > 0:
