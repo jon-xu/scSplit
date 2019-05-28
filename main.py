@@ -236,13 +236,13 @@ class models:
                     for j in range(len(unq[0])):
                         # first informative alleles for each unique pattern in the cluster screen which has maximum non-NA values in original information matrix
                         selected.append(alt_or_ref.loc[informative_sub.iloc[[i for i, x in enumerate(unq[1]) if x == j]].index].count(axis=1).idxmax())
-                    subt = submatrix.loc[np.unique(selected)].iloc[:, 0:ncols]
+                    subt = submatrix.reindex(np.unique(selected)).iloc[:, 0:ncols]
                     subt[subt.isna()]=-1
                     d = np.linalg.svd(subt, full_matrices=False)[1]
                     if sum(d>1e-10) >= ncols:
                         found = [subt[subt.sum(axis=1) == min(subt.sum(axis=1))].index[0]]
                         while len(found) < ncols:            # Gram-Schmidt Process
-                            svd = np.linalg.svd(subt.loc[found].transpose(), full_matrices=False)
+                            svd = np.linalg.svd(subt.reindex(found).transpose(), full_matrices=False)
                             U, V = svd[0], svd[2]
                             if len(found) == 1: D=np.asmatrix(svd[1])
                             else: D = np.diag(svd[1])
@@ -252,9 +252,9 @@ class models:
                                 for i in range(colU):
                                     proj[i, j] = np.matmul(U[:,i], subt.iloc[j])
                             W = np.matmul(np.matmul(Vinv, Dinv), proj)
-                            R = np.matmul(subt.loc[found].transpose(), W)
+                            R = np.matmul(subt.reindex(found).transpose(), W)
                             diff = (subt.transpose() - R).transpose()
-                            subt1 = subt.loc[diff[diff.var(axis=1) > (0.5 * max(diff.var(axis=1)))].index]
+                            subt1 = subt.reindex(diff[diff.var(axis=1) > (0.5 * max(diff.var(axis=1)))].index)
                             found += [subt1[subt1.sum(axis=1) == min(subt1.sum(axis=1))].index[0]]
                 ncols -= 1
                 submatrix = submatrix.iloc[:, 0:ncols]
@@ -266,13 +266,13 @@ class models:
             # find indistinguishable clusters to form new submatrix
             for i in range(1, len(alt_or_ref.columns)):
                 for j in range(i):
-                    if (alt_or_ref.loc[self.dist_variants].iloc[:, [i, j]].var(axis=1)).sum() == 0:
+                    if (alt_or_ref.reindex(self.dist_variants).iloc[:, [i, j]].var(axis=1)).sum() == 0:
                         todo.extend([i, j])
             submatrix = alt_or_ref.iloc[:, sorted(set(todo))]
             ncols = len(submatrix.columns)
 
         self.dist_variants = list(set(self.dist_variants))
-        self.dist_matrix = alt_or_ref.loc[self.dist_variants]
+        self.dist_matrix = alt_or_ref.reindex(self.dist_variants)
 
 
 def main():
