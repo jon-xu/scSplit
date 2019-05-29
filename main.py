@@ -49,7 +49,7 @@ class models:
         N_A = self.alt_bc_mtx.sum(axis=1) + self.pseudo
         N_R = self.ref_bc_mtx.sum(axis=1) + self.pseudo
         N_T = N_A + N_R
-        k_ref,  k_alt = N_R / N_T, N_A / N_T
+        k_alt = N_A / N_T
 
         # find barcodes for state initialization, using subsetting/PCA/K-mean
         base_mtx = (self.alt_bc_mtx + self.ref_bc_mtx).toarray()
@@ -88,7 +88,7 @@ class models:
                         self.initial[n].append(self.barcodes[col])
                 barcode_alt = np.array(self.alt_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
                 barcode_ref = np.array(self.ref_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
-                self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + k_alt + k_ref)
+                self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + 1)
 
 
     def run_EM(self):
@@ -138,8 +138,8 @@ class models:
 
         N_ref = self.ref_bc_mtx.sum(axis=1) + self.pseudo
         N_alt = self.alt_bc_mtx.sum(axis=1) + self.pseudo
-        k_ref, k_alt = N_ref / (N_ref + N_alt), N_alt / (N_ref + N_alt)
-        self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + k_ref + k_alt),
+        k_alt = N_alt / (N_ref + N_alt)
+        self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 1),
                                         index = self.all_POS, columns = range(self.num))
 
 
