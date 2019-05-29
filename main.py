@@ -46,10 +46,9 @@ class models:
         self.pseudo = 1
 
         # set background alt count proportion as allele fraction for each SNVs of doublet state, with pseudo count added for 0 counts on multi-base SNPs
-        N_A = self.alt_bc_mtx.sum(axis=1) + self.pseudo
-        N_R = self.ref_bc_mtx.sum(axis=1) + self.pseudo
-        N_T = N_A + N_R
-        k_alt = N_A / N_T
+        N_alt = self.alt_bc_mtx.sum(axis=1) + self.pseudo
+        N_ref = self.ref_bc_mtx.sum(axis=1) + self.pseudo
+        self.k_alt = N_alt / (N_ref + N_alt)
 
         # find barcodes for state initialization, using subsetting/PCA/K-mean
         base_mtx = (self.alt_bc_mtx + self.ref_bc_mtx).toarray()
@@ -88,7 +87,7 @@ class models:
                         self.initial[n].append(self.barcodes[col])
                 barcode_alt = np.array(self.alt_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
                 barcode_ref = np.array(self.ref_bc_mtx[:, icols[kmeans.labels_==n]].sum(axis=1))
-                self.model_af.loc[:, n] = (barcode_alt + k_alt) / (barcode_alt + barcode_ref + 1)
+                self.model_af.loc[:, n] = (barcode_alt + self.k_alt) / (barcode_alt + barcode_ref + self.pseudo)
 
 
     def run_EM(self):
@@ -136,10 +135,7 @@ class models:
         Update the model allele fraction by distributing the alt and total counts of each barcode on a certain snv to the model based on P(s|c)
         """
 
-        N_ref = self.ref_bc_mtx.sum(axis=1) + self.pseudo
-        N_alt = self.alt_bc_mtx.sum(axis=1) + self.pseudo
-        k_alt = N_alt / (N_ref + N_alt)
-        self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + 1),
+        self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + self.k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + self.pseudo),
                                         index = self.all_POS, columns = range(self.num))
 
 
