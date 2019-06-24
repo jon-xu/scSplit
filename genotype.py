@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Reference free AF-based demultiplexing on pooled scRNA-seq
 Generate genotype information in VCF format

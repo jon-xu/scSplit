@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Simulate SNV/Barcode Matrices (ref/alt) for genotype-free demultiplexing on pooled scRNA-seq 
 Jon Xu (jun.xu@uq.edu.au)

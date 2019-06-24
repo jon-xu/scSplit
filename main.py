@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Reference free AF-based demultiplexing on pooled scRNA-seq (state intialisation using pca, with random factor to avoid local maximum)
 Jon Xu (jun.xu@uq.edu.au)
