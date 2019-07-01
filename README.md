@@ -5,7 +5,7 @@
 ### How to install:
     1) install python 3.6+
     2) make sure these python packages can be imported: numpy, math, pandas, pickle, pysam, random, scipy, statistics, scikit-learn, PyVCF
-    3) pip install scSplit -> python3 -m scSplit ..., or: git clone https://github.com/jon-xu/scSplit
+    3) git clone https://github.com/jon-xu/scSplit
 
 ### How to run the toolset:
 
@@ -23,7 +23,7 @@
 
 ##### 3. Building allele count matrices
    *a) Run python script "matrices.py" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.*
-   
+      input parameters:
         -v, --vcf, VCF from mixed BAM
         -i, --bam, mixed sample BAM        
         -b, --barcodes, barcodes whitelist        
@@ -42,7 +42,7 @@
    *b) This step is also memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 50GB RAM to run, please allow enough RAM resource for running the script.
    
    *b) Run python script "main.py"*
-   
+      input parameters:   
         -r, --ref, Ref count CSV as input        
         -a, --alt, Alt count CSV as input        
         -n, --num, Number of mixed samples
@@ -64,7 +64,7 @@
 
 ##### 5. Generate genotypes based on the split result
    *a) Run python script "genotype.py"*
-             
+       input parameters:            
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
         -p, --psc, generated P(S|C)
