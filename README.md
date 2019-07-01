@@ -9,7 +9,7 @@
 
 ### How to run the toolset:
 
-![alt text](https://github.com/jon-xu/scSplit/blob/master/man/wrokflow.png)
+![alt text](https://github.com/jon-xu/scSplit/blob/master/man/workflow.png)
 
 ##### 1. Data quality control and filtering
    *a) Copy target BAM file (barcodes marked with CB:Z: tag) into the same folder of scSplit, keep only the reads with white listed barcodes to reduce technical noises.*
