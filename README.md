@@ -54,9 +54,9 @@
 
    *g) "scSplit_PA_matrix.csv": the full ALT allele Presence/Absence (P/A) matrix for all samples* 
    
-   *g) "scSplit.model", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)*
+   *h) "scSplit.model", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)*
    
-   *h) "scSplit.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
+   *i) "scSplit.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
 
 ##### 5. Generate genotypes based on the split result
    *a) Run python script "genotype.py"*
