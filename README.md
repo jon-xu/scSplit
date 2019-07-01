@@ -4,7 +4,7 @@
 
 ### How to install:
     1) install python 3.6+
-    2) install python packages: numpy, math, pandas, pickle, pysam, random, scipy, scikit-learn, pyvcf
+    2) install python packages: numpy, math, pandas, pickle, pysam, random, scipy, scikit-learn, PyVCF
     3) pip install scSplit -> python3 -m scSplit ..., or: git clone https://github.com/jon-xu/scSplit
 
 ### How to run the toolset:
@@ -35,7 +35,7 @@
 ##### 4. Exectuion and verification of demultiplexing
    *a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file*
 
-   *b) This step is also memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and cell quantity. As a guideline, a matrix with 60,000 SNVs and 10,000 might need more than 50GB RAM to run, please grant enough RAM resource for running the script
+   *b) This step is also memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need 50-100GB RAM to run.
    
    *b) Run python script "main.py"*
    
@@ -50,7 +50,9 @@
    
    *e) "scSplit_dist_alleles.txt": the distinguishing alleles that can be used to genotype and assign sample to clusters*
    
-   *f) "scSplit_dist_matrix.csv": the ALT alelle Presence/Absence (P/A) matrix as a reference in assigning sasmple to clusters*
+   *f) "scSplit_dist_matrix.csv": the ALT allele Presence/Absence (P/A) matrix on distinguishing variants for all samples as a reference in assigning sample to clusters*
+
+   *g) "scSplit_PA_matrix.csv": the full ALT allele Presence/Absence (P/A) matrix for all samples* 
    
    *g) "scSplit.model", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)*
    
