@@ -24,7 +24,6 @@ def main():
     parser.add_argument('-p', '--psc', required=True, help='generated P(S|C)')
     args = parser.parse_args()
 
-    dist_alleles = []
     ref = pd.read_csv(args.ref, header=0, index_col=0)
     alt = pd.read_csv(args.alt, header=0, index_col=0)
     ref_s = csr_matrix(ref.values)
