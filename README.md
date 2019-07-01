@@ -37,7 +37,7 @@
         hg19: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
         hg38: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/release/20190312_biallelic_SNV_and_INDEL/
         
-        To process the genotype files, either download per-chromosome files and concatenate them using bcftools or the whole genome file, take the first two columns of the vcf file and replace the tab with colon sign so that each line is one SNV, e.g. "1:10177".  Then filter the matrices generated in the last step ("ref_filtered.csv" and "alt_filtered.csv") with the list of common SNVs and use them as reference and alternative matrices as inputs for scSplit run.
+   To process the genotype files, either download per-chromosome files and concatenate them using bcftools or the whole genome file, take the first two columns of the vcf file and replace the tab with colon sign so that each line is one SNV, e.g. "1:10177".  Then filter the matrices generated in the last step ("ref_filtered.csv" and "alt_filtered.csv") with the list of common SNVs and use them as reference and alternative matrices as inputs for scSplit run.
         
 
 ##### 4. Exectuion and verification of demultiplexing
