@@ -30,12 +30,12 @@
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
    
-   *b) This step is memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and cell quantity. As a guideline, a matrix with 60,000 SNVs and 10,000 might need more than 30GB RAM to run, please grant enough RAM resource for running the script
+   *b) This step is memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
 
 ##### 4. Exectuion and verification of demultiplexing
    *a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file*
 
-   *b) This step is also memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need 50-100GB RAM to run.
+   *b) This step is also memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 50GB RAM to run, please allow enough RAM resource for running the script.
    
    *b) Run python script "main.py"*
    
