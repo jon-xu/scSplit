@@ -9,7 +9,7 @@
 
 ### How to run the toolset:
 
-![alt text](https://github.com/jon-xu/scSplit/blob/master/man/figure1_pipeline.png)
+![alt text](https://github.com/jon-xu/scSplit/blob/master/man/wrokflow.png)
 
 ##### 1. Data quality control and filtering
    *a) Copy target BAM file (barcodes marked with CB:Z: tag) into the same folder of scSplit, keep only the reads with white listed barcodes to reduce technical noises.*
@@ -44,7 +44,7 @@
    Then filter the matrices generated in the last step ("ref_filtered.csv" and "alt_filtered.csv") with the list of common SNVs and use them as reference and alternative matrices as inputs for scSplit run.
 
 
-##### 4. Exectuion and verification of demultiplexing
+##### 4. Demultiplexing and generate ALT P/A matrix
    *a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file*
 
    *b) This step is also memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 50GB RAM to run, please allow enough RAM resource for running the script.
@@ -70,7 +70,7 @@
    
    *i) "scSplit.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample*
 
-##### 5. Generate genotypes based on the split result
+##### 5. Generate sample genotypes based on the split result
    *a) Run python script "genotype.py"*
        input parameters:            
         -r, --ref, Ref count CSV as output        
