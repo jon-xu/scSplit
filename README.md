@@ -32,6 +32,10 @@
    
    *b) This step is memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
 
+   *c) Common SNPs from 1000 Genome project can be used to filter the matrices to improve prediction accuracy:
+        - hg19: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
+        - hg38: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/release/20190312_biallelic_SNV_and_INDEL/
+
 ##### 4. Exectuion and verification of demultiplexing
    *a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file*
 
