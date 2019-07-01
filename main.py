@@ -248,9 +248,9 @@ class models:
                             proj = np.asmatrix(np.zeros((colU,subt.shape[0])))
                             for j in range(subt.shape[0]):
                                 for i in range(colU):
-                                    proj[i, j] = np.matmul(U[:,i], subt.iloc[j])
-                            W = np.matmul(np.matmul(Vinv, Dinv), proj)
-                            R = np.matmul(subt.reindex(found).transpose(), W)
+                                    proj[i, j] = np.dot(U[:,i], subt.iloc[j])
+                            W = np.dot(np.dot(Vinv, Dinv), proj)
+                            R = np.dot(subt.reindex(found).transpose(), W)
                             diff = (subt.transpose() - R).transpose()
                             subt1 = subt.reindex(diff[diff.var(axis=1) > (0.5 * max(diff.var(axis=1)))].index)
                             found += [subt1[subt1.sum(axis=1) == min(subt1.sum(axis=1))].index[0]]
@@ -271,6 +271,7 @@ class models:
 
         self.dist_variants = list(set(self.dist_variants))
         self.dist_matrix = alt_or_ref.reindex(self.dist_variants)
+        self.pa_matrix = alt_or_ref
 
 
 def main():
@@ -343,15 +344,16 @@ def main():
             for item in model.reassigned[n]:
                 myfile.write(str(item) + '\n')
     model.P_s_c.to_csv('scSplit_P_s_c.csv')
-    with open('scSplit_dist_variants.txt', 'w') as myfile:
-        for item in model.dist_variants:
-            myfile.write(str(item) + '\n')
     with open('scSplit_doublet.txt', 'w') as myfile:
         if doublets == 0:
             myfile.write('No doublet cluster expected. \n')
         else:
             myfile.write('Cluster ' + str(model.doublet) + ' is doublet. \n')
+    with open('scSplit_dist_variants.txt', 'w') as myfile:
+        for item in model.dist_variants:
+            myfile.write(str(item) + '\n')
     model.dist_matrix.to_csv('scSplit_dist_matrix.csv')
+    model.pa_matrix.to_csv('scSplit_PA_matrix.csv')
 
 
 if __name__ == '__main__':
