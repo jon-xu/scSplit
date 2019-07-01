@@ -4,7 +4,7 @@
 
 ### How to install:
     1) install python 3.6+
-    2) install python packages: numpy, math, pandas, pickle, pysam, random, scipy, scikit-learn, PyVCF
+    2) make sure these python packages can be imported: numpy, math, pandas, pickle, pysam, random, scipy, statistics, scikit-learn, PyVCF
     3) pip install scSplit -> python3 -m scSplit ..., or: git clone https://github.com/jon-xu/scSplit
 
 ### How to run the toolset:
