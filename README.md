@@ -1,10 +1,11 @@
 # scSplit
 ### Genotype-free demultiplexing of pooled single-cell RNA-seq, using a hidden state model for identifying genetically distinct samples within a mixed population.  
-#### It has been used to demultiplex up to 8 samples on 10X platform.
+#### It has been used to demultiplex 3 to 8 samples on 10X datasets.
 
 ### How to install:
   1) install python 3.6+
   2) make sure below python packages can be imported:
+  
      numpy, math, pandas, pickle, pysam, random, scipy, statistics, scikit-learn, PyVCF
   3) git clone https://github.com/jon-xu/scSplit or pip install scSplit
 
