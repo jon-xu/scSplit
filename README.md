@@ -32,20 +32,21 @@
 ### 3. Building allele count matrices
    *a) Run python script "matrices.py" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.*
       input parameters:
+      
         -v, --vcf, VCF from mixed BAM
         -i, --bam, mixed sample BAM        
         -b, --barcodes, barcodes whitelist        
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
         
-        E.g.: python matrices.py -v mixed_genotype.vcf -i mixed.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv
+   E.g.: python matrices.py -v mixed_genotype.vcf -i mixed.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv
    
    *b) This step is memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.*
 
    *c) Common SNPs (e.g., Human common SNPs from 1000 Genome project) can be used to filter the matrices to improve prediction accuracy:*
    
-        hg19: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
-        hg38: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/release/20190312_biallelic_SNV_and_INDEL/
+   hg19: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
+   hg38: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/release/20190312_biallelic_SNV_and_INDEL/
         
    To process the genotype files, either download per-chromosome files and concatenate them using bcftools or the whole genome file, take the first two columns of the vcf file and replace the tab with colon sign so that each line is one SNV, e.g., "1:10177". Processed common SNVs for hg19 and hg38 can be found here: http://data.genomicsresearch.org/Projects/scSplit/
 
@@ -58,13 +59,14 @@
    *b) This step is also memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 50GB RAM to run, please allow enough RAM resource for running the script.
    
    *b) Run python script "main.py"*
-      input parameters:   
+      input parameters:
+      
         -r, --ref, Ref count CSV as input        
         -a, --alt, Alt count CSV as input        
         -n, --num, Number of mixed samples
         -v, --vcf, individual genotypes to check distinguishing variants against (optional)
         
-        E.g.: python main.py -r ref_filtered.csv -a alt_filtered.csv -n 8
+   E.g.: python main.py -r ref_filtered.csv -a alt_filtered.csv -n 8
         
    *c) "scSplit_doublet.txt": indicating which cluster is doublet state*
    
@@ -82,12 +84,13 @@
 
 ### 5. Generate sample genotypes based on the split result
    *a) Run python script "genotype.py"*
-       input parameters:            
+       input parameters:
+       
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
         -p, --psc, generated P(S|C)
         
-        E.g.: python genotype.py -r ref_filtered.csv -a alt_filtered.csv -p scSplit_P_s_c.csv
+   E.g.: python genotype.py -r ref_filtered.csv -a alt_filtered.csv -p scSplit_P_s_c.csv
         
    *b) VCF file ("scSplit.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.*
 
