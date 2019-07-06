@@ -14,12 +14,15 @@
 ### 1. Data quality control and filtering
    *a) Copy target BAM file (barcodes marked with CB:Z: tag) into the same folder of scSplit, keep only the reads with white listed barcodes to reduce technical noises.*
    
-   *b) Process BAM file from scRNA-Seq in a way that reads with any of following patterns be filtered out: quality is lower than 10,  is unmapped segment, is secondary alignment, not passing filters, is PCR or optical duplicate, or is supplementary alignment. Example: samtools view -S -b -q 10 -F 3844 original.bam > target.bam*
+   *b) Process BAM file from scRNA-Seq in a way that reads with any of following patterns be filtered out: quality is lower than 10,  is unmapped segment, is secondary alignment, not passing filters, is PCR or optical duplicate, or is supplementary alignment. 
+   E.g.: samtools view -S -b -q 10 -F 3844 original.bam > target.bam*
    
    *c) Mark BAM file for duplication, and get it sorted and indexed, using rmdup, sort, index commands in samtools*
    
 ### 2. Calling for single-nucleotide variants
-   *a) Use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1.  Example: freebayes -f <reference.fa> -iXu -C 2 -q 1 target.bam snv.vcf. This step could take very long (up to 30 hours if not using parallel processing), GATK or other SNV calling tools might work as well.  Users can also split the BAM by chromosome and call SNVs separately.*
+   *a) Use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1.  
+   E.g.: freebayes -f <reference.fa> -iXu -C 2 -q 1 target.bam snv.vcf. 
+   This step could take very long (up to 30 hours if not using parallel processing), GATK or other SNV calling tools might work as well.  Users can also split the BAM by chromosome and call SNVs separately.*
    
    *b) The output VCF file will be futher filtered so that only the SNVs with quality score larger than 30 would be kept.*
 
@@ -31,6 +34,7 @@
         -b, --barcodes, barcodes whitelist        
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
+        E.g.: python matrices.py -v mixed_genotype.vcf -i mixed.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv
    
    *b) This step is memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.*
 
@@ -55,6 +59,7 @@
         -a, --alt, Alt count CSV as input        
         -n, --num, Number of mixed samples
         -v, --vcf, individual genotypes to check distinguishing variants against (optional)
+        E.g.: python main.py -r ref_filtered.csv -a alt_filtered.csv -n 8
         
    *c) "scSplit_doublet.txt": indicating which cluster is doublet state*
    
@@ -76,6 +81,7 @@
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
         -p, --psc, generated P(S|C)
+        E.g.: python genotype.py -r ref_filtered.csv -a alt_filtered.csv -p scSplit_P_s_c.csv
         
    *b) VCF file ("scSplit.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.*
 
