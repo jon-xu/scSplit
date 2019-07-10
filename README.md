@@ -45,13 +45,22 @@
    
    b) This step is memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
 
-   c) Common SNPs (e.g., Human common SNPs from 1000 Genome project) can be used to filter the matrices to improve prediction accuracy:
+   c) Two filtering methods can be used to filter the matrices to improve prediction accuracy:
+      1) Common SNPs (e.g., Human common SNPs from 1000 Genome project)
    
-   hg19: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
+      hg19: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
    
-   hg38: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/release/20181203_biallelic_SNV/
+      hg38: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/release/20181203_biallelic_SNV/
         
-   To process the genotype files, either download per-chromosome files and concatenate them using bcftools or the whole genome file, take the first two columns of the vcf file and replace the tab with colon sign so that each line is one SNV, e.g., "1:10177". Processed common SNVs for hg19 and hg38 can be found here: http://data.genomicsresearch.org/Projects/scSplit/
+      To process the genotype files of common SNPs, either download per-chromosome files and concatenate them using bcftools or the whole genome file, take the first two columns of the vcf file and replace the tab with colon sign so that each line is one SNV, e.g., "1:10177". Processed common SNVs for hg19 and hg38 can be found here: http://data.genomicsresearch.org/Projects/scSplit/
+
+      2) repeat sequence regions (repeatmasker)
+
+      hg19: http://www.repeatmasker.org/genomes/hg19/RepeatMasker-rm405-db20140131/hg19.fa.out.gz
+
+      hg38: http://www.repeatmasker.org/genomes/hg38/RepeatMasker-rm405-db20140131/hg38.fa.out.gz
+
+      To process the files, take the chromosome, start and end columns of the files, and filter the called SNVs with these blacklist regions and get a list of SNVs without falling into these regions.
 
    Then filter the matrices generated in the last step ("ref_filtered.csv" and "alt_filtered.csv") with the list of common SNVs and use them as reference and alternative matrices as inputs for scSplit run.
 
