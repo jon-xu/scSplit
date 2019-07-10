@@ -47,24 +47,23 @@
 
    c) Two filtering methods can be used to filter the matrices to improve prediction accuracy:
    
-   1) Common SNPs (e.g., Human common SNPs from 1000 Genome project)
-   
-      hg19: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
-   
-      hg38: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/release/20181203_biallelic_SNV/
-        
-      To process the genotype files of common SNPs, either download per-chromosome files and concatenate them using bcftools or the whole genome file, take the first two columns of the vcf file and replace the tab with colon sign so that each line is one SNV, e.g., "1:10177". Processed common SNVs for hg19 and hg38 can be found here: http://data.genomicsresearch.org/Projects/scSplit/
-
-   2) repeat sequence regions (repeatmasker)
+   1) Repeat sequence regions (repeatmasker)
 
       hg19: http://www.repeatmasker.org/genomes/hg19/RepeatMasker-rm405-db20140131/hg19.fa.out.gz
 
       hg38: http://www.repeatmasker.org/genomes/hg38/RepeatMasker-rm405-db20140131/hg38.fa.out.gz
 
-      To process the files, take the chromosome, start and end columns of the files, and filter the called SNVs with these blacklist regions and get a list of SNVs without falling into these regions.
+      To process the downloaded files, take the chromosome, start and end columns of the files, and filter the called SNVs with these blacklist regions and get a list of SNVs (in a format like: "1:10177") which don't fall into the repeat regions. Processed repeat regions for hg19 and hg38 can be found here: http://data.genomicsresearch.org/Projects/scSplit/RepeatRegions
+
+   2) Common SNPs (e.g., Human common SNPs from 1000 Genome project)
+   
+      hg19: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
+   
+      hg38: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/release/20181203_biallelic_SNV/
+        
+      To process the genotype files of common SNPs, either download per-chromosome files and concatenate them using bcftools or the whole genome file, take the first two columns of the vcf file and replace the tab with colon sign so that each line is one SNV, e.g., "1:10177". Processed common SNVs for hg19 and hg38 can be found here: http://data.genomicsresearch.org/Projects/scSplit/CommonSNVs
 
    Then filter the matrices generated in the last step ("ref_filtered.csv" and "alt_filtered.csv") with the list of common SNVs and use them as reference and alternative matrices as inputs for scSplit run.
-
 
 ### 4. Demultiplexing and generate ALT P/A matrix
    a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file
