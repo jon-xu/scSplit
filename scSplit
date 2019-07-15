@@ -1,23 +1,89 @@
 #!/usr/bin/env python3
 
 """
-Reference free AF-based demultiplexing on pooled scRNA-seq (state intialisation using pca, with random factor to avoid local maximum)
+Reference free AF-based demultiplexing on pooled scRNA-seq
 Jon Xu (jun.xu@uq.edu.au)
 Lachlan Coin
 Aug 2018
 """
 
 import numpy as np
+import pysam as ps
 import pandas as pd
-import vcf
 import statistics as stat
+from scipy.stats import binom
 from scipy.sparse import csr_matrix
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-import datetime, pickle, argparse
+import sys, vcf, csv, math, datetime, pickle, argparse
+
+class SNV_data:
+    """
+    Stores data on each SNV
+    """
+
+    def __init__(self, chrom, pos, ref, alt):
+
+        self.CHROM = chrom
+        self.POS = pos
+        self.REF = ref
+        self.ALT = alt
+
+
+class SNV_list(list):
+    """
+    List of SNV_data objects
+    """
+
+    def add_SNV(self, *args, **kwargs):
+        self.append(SNV_data(*args, **kwargs))
+
+
+    def build_base_calls_matrix(self, file_s, barcodes):
+        """
+        Build pandas DataFrame
+        Parameters:
+            file_s(str): Path to sam file (0-based positions)
+            barcodes(list): cell barcodes
+        """
+
+        all_POS = []   # snv positions
+        for entry in self:
+            pos = str(entry.CHROM) + ':' + str(entry.POS)
+            if pos not in all_POS:
+                all_POS.append(pos)
+
+        in_sam = ps.AlignmentFile(file_s, 'rb')
+        ref_base_calls_mtx = pd.DataFrame(0, index=all_POS, columns=barcodes)
+        alt_base_calls_mtx = pd.DataFrame(0, index=all_POS, columns=barcodes)
+        print('Num Pos:', len(all_POS), ', Num barcodes:', len(barcodes))
+
+        for snv in self:
+            position = str(snv.CHROM) + ':' + str(snv.POS)
+            for read in in_sam.fetch(snv.CHROM, snv.POS-1, snv.POS+1):
+                if read.flag < 256:   # only valid reads
+                    if (snv.POS - 1) in read.get_reference_positions():
+                        # if the read aligned positions cover the SNV position
+                        try:
+                            barcode = read.get_tag('CB')
+                        except:
+                            barcode = ''
+                        if barcode in barcodes:
+                            # read the base from the snv.POS which the read has mapped to
+                            base = read.query_sequence[[item for item in read.get_aligned_pairs(True) if item[1] == (snv.POS - 1)][0][0]]
+                            if base == snv.REF:
+                                ref_base_calls_mtx.loc[position, barcode] += 1
+                            if base == snv.ALT:
+                                alt_base_calls_mtx.loc[position, barcode] += 1
+
+        ref_base_calls_mtx.index.name = alt_base_calls_mtx.index.name = 'SNV'
+
+        return (ref_base_calls_mtx, alt_base_calls_mtx)
+
 
 class models:
+
     def __init__(self, base_calls_mtx, num, doublets):
         """
         Model class containing SNVs, matrices counts, barcodes, model allele fraction with assigned cells
@@ -274,87 +340,243 @@ class models:
         self.pa_matrix = alt_or_ref
 
 
-def main():
+class scSplit():
 
-    # Process command line arguments
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-r', '--ref', required=True,  help='Ref count CSV input')
-    parser.add_argument('-a', '--alt', required=True,  help='Alt count CSV input')
-    parser.add_argument('-n', '--num', required=True,  help='Number of mixed samples')
-    parser.add_argument('-d', '--doublets', required=False, help='Doublet proportion [0.05]')
-    parser.add_argument('-v', '--vcf', required=False, help='vcf file for filtering distiinguishing variants')
-    args = parser.parse_args()
+    def __init__(self):
+        parser = argparse.ArgumentParser(
+            description='Genotype-free demultiplexing of pooled single-cell RNA-Seq',
+            usage='''scSplit <command> [<args>]
 
-    try:
-        doublets = float(args.doublets)
-    except:
-        doublets = -1
+Commands:
+   count     Generate REF/ALT count matrices from pooled BAM file
+   run       Demultiplex the scRNA-Seq using REF/ALT count matrices
+   genotype  Generate genotype information in VCF format
+''')
+        parser.add_argument('command', help='Subcommand to run')
 
-    if doublets == 0:
-        num = int(args.num)
-    else:
-        num = int(args.num) + 1  # additional doublet state
+        args = parser.parse_args(sys.argv[1:2])
+        if hasattr(self, args.command):
+            getattr(self, args.command)()
 
-    progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
-    with open('scSplit.log', 'a') as myfile: myfile.write(progress)
 
-    # Read in existing matrix from the csv files
-    ref = pd.read_csv(args.ref, header=0, index_col=0)
-    alt = pd.read_csv(args.alt, header=0, index_col=0)
-    ref_s, alt_s = csr_matrix(ref.values), csr_matrix(alt.values)
-    base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
-    progress = 'Allele counts matrices uploaded: ' + str(datetime.datetime.now()) + '\n'
-    with open('scSplit.log', 'a') as myfile: myfile.write(progress)
+    def count(self):    # Generate REF/ALT count matrices from pooled BAM file
 
-    max_likelihood = -1e10
-    for i in range(30):
-        with open('scSplit.log', 'a') as myfile: myfile.write('round ' + str(i) + '\n')
+        # Process command line arguments
+        parser = argparse.ArgumentParser(description='Generate REF/ALT count matrices from pooled BAM file',
+            usage='''scSplit count [<args>]
 
-        model = models(base_calls_mtx, int(num), doublets)
-        if model.model_af.sum().sum() > 0:
-            model.run_EM()
-            model.assign_cells()
-            if model.lP_c_s.max(axis=1).sum() > max_likelihood:
-                max_likelihood = model.lP_c_s.max(axis=1).sum()
-                initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
-    model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
-
-    model.define_doublet()
-    model.refine_doublets(doublets)
-
-    pos = []
-    try:
-        for record in vcf.Reader(open(args.vcf, 'r')):
-            # only keep high R2 variants
-            try:
-                if float(record.INFO['R2'][0]) > 0.9:
-                    pos.append(model.all_POS.index(str(record.CHROM)+':'+str(record.POS)))
-            except:
-                continue
-    except:
-        pass
+Options:
+   -v, --vcf        Genotype of mixed BAM in VCF format
+   -i, --bam        Mixed sample BAM file
+   -b, --bar        Barcodes whitelist
+   -r, --ref        REF count CSV output
+   -a, --alt        ALT count CSV output
+''')
+        parser.add_argument('-v', '--vcf', required=True,  help='Genotype of mixed BAM in VCF format')
+        parser.add_argument('-i', '--bam', required=True, help='Mixed sample BAM file')
+        parser.add_argument('-b', '--bar', required=True,  help='Barcodes whitelist')
+        parser.add_argument('-r', '--ref', required=True,  help='REF count CSV output')
+        parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV output')
+        args = parser.parse_args(sys.argv[2:])
         
-    model.distinguishing_alleles(pos)
+        dist_alleles = []
+        epsilon = 0.01
 
-    # generate outputs
-    with open('scSplit_model', 'wb') as f:
-        pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
-    for n in range(int(num)):
-        with open('scSplit_barcodes_{}.csv'.format(n), 'w') as myfile:
-            for item in model.reassigned[n]:
-                myfile.write(str(item) + '\n')
-    model.P_s_c.to_csv('scSplit_P_s_c.csv')
-    with open('scSplit_doublet.txt', 'w') as myfile:
+        all_SNVs = SNV_list()  # list of SNV_data objects
+        for record in vcf.Reader(open(args.vcf, 'r')):
+            # only keep SNVs with heterozygous genotypes, and ignore SNV with multiple bases (e.g. GGGT/GGAT)
+            if (record.samples[0]['GL'][1] > np.log10(1-epsilon)) & (len(record.REF) == 1) & (len(record.ALT) == 1):
+                all_SNVs.add_SNV(record.CHROM, record.POS, record.REF, record.ALT[0])
+        
+        barcodes = []   # list of cell barcodes
+        for line in open(args.barcodes, 'r'):
+            barcodes.append(line.strip())
+
+        base_calls_mtx = all_SNVs.build_base_calls_matrix(args.bam, barcodes)
+        base_calls_mtx[0].to_csv('{}'.format(args.ref))
+        base_calls_mtx[1].to_csv('{}'.format(args.alt))
+
+
+    def run(self):      # Demultiplex the scRNA-Seq using REF/ALT count matrices
+
+        # Process command line arguments
+        parser = argparse.ArgumentParser(description='Demultiplex the scRNA-Seq using REF/ALT count matrices',
+            usage='''scSplit run [<args>]
+
+Options:
+   -r, --ref    REF count CSV input
+   -a, --alt    ALT count CSV input
+   -n, --num    Number of mixed samples
+   -d, --dbl    Doublet proportion [0.05]
+   -v, --vcf    VCF file for filtering distinguishing variants
+''')
+        parser.add_argument('-r', '--ref', required=True,  help='REF count CSV input')
+        parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV input')
+        parser.add_argument('-n', '--num', required=True,  help='Number of mixed samples')
+        parser.add_argument('-d', '--dbl', required=False, help='Doublet proportion [0.05]')
+        parser.add_argument('-v', '--vcf', required=False, help='VCF file for filtering distinguishing variants')
+        args = parser.parse_args(sys.argv[2:])
+
+        try:
+            doublets = float(args.doublets)
+        except:
+            doublets = -1
+
         if doublets == 0:
-            myfile.write('No doublet cluster expected. \n')
+            num = int(args.num)
         else:
-            myfile.write('Cluster ' + str(model.doublet) + ' is doublet. \n')
-    with open('scSplit_dist_variants.txt', 'w') as myfile:
-        for item in model.dist_variants:
-            myfile.write(str(item) + '\n')
-    model.dist_matrix.to_csv('scSplit_dist_matrix.csv')
-    model.pa_matrix.to_csv('scSplit_PA_matrix.csv')
+            num = int(args.num) + 1  # additional doublet state
 
+        progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
+        with open('scSplit.log', 'a') as myfile: myfile.write(progress)
+
+        # Read in existing matrix from the csv files
+        ref = pd.read_csv(args.ref, header=0, index_col=0)
+        alt = pd.read_csv(args.alt, header=0, index_col=0)
+        ref_s, alt_s = csr_matrix(ref.values), csr_matrix(alt.values)
+        base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
+        progress = 'Allele counts matrices uploaded: ' + str(datetime.datetime.now()) + '\n'
+        with open('scSplit.log', 'a') as myfile: myfile.write(progress)
+
+        max_likelihood = -1e10
+        for i in range(30):
+            with open('scSplit.log', 'a') as myfile: myfile.write('round ' + str(i) + '\n')
+
+            model = models(base_calls_mtx, int(num), doublets)
+            if model.model_af.sum().sum() > 0:
+                model.run_EM()
+                model.assign_cells()
+                if model.lP_c_s.max(axis=1).sum() > max_likelihood:
+                    max_likelihood = model.lP_c_s.max(axis=1).sum()
+                    initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
+        model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
+
+        model.define_doublet()
+        model.refine_doublets(doublets)
+
+        pos = []
+        try:
+            for record in vcf.Reader(open(args.vcf, 'r')):
+                # only keep high R2 variants
+                try:
+                    if float(record.INFO['R2'][0]) > 0.9:
+                        pos.append(model.all_POS.index(str(record.CHROM)+':'+str(record.POS)))
+                except:
+                    continue
+        except:
+            pass
+            
+        model.distinguishing_alleles(pos)
+
+        # generate outputs
+        with open('scSplit_model', 'wb') as f:
+            pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
+        for n in range(int(num)):
+            with open('scSplit_barcodes_{}.csv'.format(n), 'w') as myfile:
+                for item in model.reassigned[n]:
+                    myfile.write(str(item) + '\n')
+        model.P_s_c.to_csv('scSplit_P_s_c.csv')
+        with open('scSplit_doublet.txt', 'w') as myfile:
+            if doublets == 0:
+                myfile.write('No doublet cluster expected. \n')
+            else:
+                myfile.write('Cluster ' + str(model.doublet) + ' is doublet. \n')
+        with open('scSplit_dist_variants.txt', 'w') as myfile:
+            for item in model.dist_variants:
+                myfile.write(str(item) + '\n')
+        model.dist_matrix.to_csv('scSplit_dist_matrix.csv')
+        model.pa_matrix.to_csv('scSplit_PA_matrix.csv')
+
+
+    def genotype(self):     # Generate genotype information in VCF format
+
+        # Process command line arguments
+        parser = argparse.ArgumentParser(description='Generate genotype information in VCF format',
+            usage='''scSplit genotype [<args>]
+
+Options:
+   -r, --ref    REF count CSV input
+   -a, --alt    ALT count CSV input
+   -p, --psc    generated P(S|C)
+''')
+        parser.add_argument('-r', '--ref', required=True,  help='REF count CSV input')
+        parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV input')
+        parser.add_argument('-p', '--psc', required=True, help='generated P(S|C)')
+        args = parser.parse_args(sys.argv[2:])
+
+        ref = pd.read_csv(args.ref, header=0, index_col=0)
+        alt = pd.read_csv(args.alt, header=0, index_col=0)
+        ref_s = csr_matrix(ref.values)
+        alt_s = csr_matrix(alt.values)
+        all_POS = ref.index
+
+        # get cell assignment
+        P_s_c = pd.read_csv(args.psc, header=0, index_col=0)
+        A_s_c = ((P_s_c >= 0.9) * 1).astype('float64')
+        num = len(P_s_c.columns)
+
+        err = 0.01  # error rate assumption
+        # binomial simulation for genotype likelihood P(D|AA,RA,RR) with the alt count vs total count condition and (err, 0.5, 1-err) as allele probability
+        lp_d_rr = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), err), index=all_POS, columns=range(num)).apply(np.log10)
+        lp_d_ra = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 0.5), index=all_POS, columns=range(num)).apply(np.log10)
+        lp_d_aa = pd.DataFrame(binom.pmf(pd.DataFrame(alt_s.dot(A_s_c)), pd.DataFrame((alt_s + ref_s).dot(A_s_c)), 1-err), index=all_POS, columns=range(num)).apply(np.log10)
+
+        vcf_content = pd.DataFrame(index = all_POS, columns = range(-9, num))  # -9~-1: meta data, 0: doublet state, 1:num: samples
+        names = vcf_content.columns.tolist()
+        names[0] = '#CHROM'
+        names[1] = 'POS'
+        names[2] = 'ID'
+        names[3] = 'REF'
+        names[4] = 'ALT'
+        names[5] = 'QUAL'
+        names[6] = 'FILTER'
+        names[7] = 'INFO'
+        names[8] = 'FORMAT'
+        vcf_content.columns = names
+        vcf_content.loc[:,'#CHROM'] = [item.split(':')[0] for item in all_POS]
+        vcf_content.loc[:,'POS'] = [item.split(':')[1] for item in all_POS]
+        vcf_content.loc[:,'ID'] = all_POS
+        vcf_content.loc[:,'REF'] = '.'
+        vcf_content.loc[:,'ALT'] = '.'
+        vcf_content.loc[:,'QUAL'] = '.'
+        vcf_content.loc[:,'FILTER'] = '.'
+        vcf_content.loc[:,'INFO'] = '.'
+        vcf_content.loc[:,'FORMAT'] = 'GP:GL'
+
+        # round to three decimal points
+        GL_RR = 10 ** lp_d_rr.astype(float)
+        GL_RA = 10 ** lp_d_ra.astype(float)
+        GL_AA = 10 ** lp_d_aa.astype(float)
+        GL_nom = GL_RR + GL_RA + GL_AA
+        GP_RR = round(GL_RR / GL_nom, 3).astype(str)
+        GP_RA = round(GL_RA / GL_nom, 3).astype(str)
+        GP_AA = round(GL_AA / GL_nom, 3).astype(str)
+        lGL_RR = round(lp_d_rr.astype(float), 3).astype(str)
+        lGL_RA = round(lp_d_ra.astype(float), 3).astype(str)
+        lGL_AA = round(lp_d_aa.astype(float), 3).astype(str)
+
+        for n in range(num):
+            vcf_content.loc[:, n] = GP_RR.loc[:, n] + ',' + GP_RA.loc[:, n] + ',' + GP_AA.loc[:, n] + \
+                            ':' + lGL_RR.loc[:, n] + ',' + lGL_RA.loc[:, n] + ',' + lGL_AA.loc[:, n]
+
+        header = '##fileformat=VCFv4.2\n##fileDate=' + str(datetime.datetime.today()).split(' ')[0] + \
+                '\n##source=sc_split\n##reference=hg19.fa\n##contig=<ID=1,length=249250621>\n' + \
+                '##contig=<ID=10,length=135534747>\n##contig=<ID=11,length=135006516>\n##contig=<ID=12,length=133851895>\n' + \
+                '##contig=<ID=13,length=115169878>\n##contig=<ID=14,length=107349540>\n##contig=<ID=15,length=102531392>\n' + \
+                '##contig=<ID=16,length=90354753>\n##contig=<ID=17,length=81195210>\n##contig=<ID=18,length=78077248>\n' + \
+                '##contig=<ID=19,length=59128983>\n##contig=<ID=2,length=243199373>\n##contig=<ID=20,length=63025520>\n' + \
+                '##contig=<ID=21,length=48129895>\n##contig=<ID=22,length=51304566>\n##contig=<ID=3,length=198022430>\n' + \
+                '##contig=<ID=4,length=191154276>\n##contig=<ID=5,length=180915260>\n##contig=<ID=6,length=171115067>\n' + \
+                '##contig=<ID=7,length=159138663>\n##contig=<ID=8,length=146364022>\n##contig=<ID=9,length=141213431>\n' + \
+                '##contig=<ID=MT,length=16569>\n##contig=<ID=X,length=155270560>\n##contig=<ID=Y,length=59373566>\n' + \
+                '##FILTER=<ID=PASS,Description="All filters passed">\n##INFO=<ID=AN,Number=1,Type=Integer,Description="Total Allele Count">\n' + \
+                '##INFO=<ID=AC,Number=A,Type=Integer,Description="Alternate Allele Count">\n' + \
+                '##INFO=<ID=AF,Number=A,Type=Float,Description="Estimated Alternate Allele Frequency">\n' + \
+                '##FORMAT=<ID=GL,Number=3,Type=Float,Description="Genotype Likelihood for RR/RA/AA">\n'
+
+        with open('sc_split.vcf', 'w+') as myfile:
+            myfile.write(header)
+            vcf_content.to_csv(myfile, index=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='"')
 
 if __name__ == '__main__':
-    main()
+    scSplit()
