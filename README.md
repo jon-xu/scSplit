@@ -10,7 +10,7 @@
   3) git clone https://github.com/jon-xu/scSplit
   4) run with "\<PATH\>/scSplit \<command\> \<args\>" or "python \<PATH\>/scSplit \<command\> \<args\>" 
 
-### How to run the toolset:
+### Overall Pipeline:
 
 ![alt text](https://github.com/jon-xu/scSplit/blob/master/man/workflow.png)
 
