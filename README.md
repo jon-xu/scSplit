@@ -41,6 +41,7 @@
         -b, --barcodes, barcodes whitelist        
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
+        
         e.g.: scSplit count -v mixed_genotype.vcf -i mixed.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv
    
    b) This step is memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
@@ -76,6 +77,7 @@
         -a, --alt, Alt count CSV as input        
         -n, --num, Number of mixed samples
         -v, --vcf, individual genotypes to check distinguishing variants against (optional)
+
         e.g.: scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 8
 
    d) Below files will be generated:
@@ -94,6 +96,7 @@
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
         -p, --psc, generated P(S|C)
+
         e.g.: scSplit genotype -r ref_filtered.csv -a alt_filtered.csv -p scSplit_P_s_c.csv
         
    b) VCF file ("scSplit.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.
