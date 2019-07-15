@@ -8,7 +8,7 @@
   
      numpy, math, pandas, pickle, pysam, random, scipy, statistics, scikit-learn, PyVCF
   3) git clone https://github.com/jon-xu/scSplit
-  4) run with "<PATH>/scSplit \<command\> \<args\>" or "python <PATH>/scSplit \<command\> \<args\>" 
+  4) run with "\<PATH\>/scSplit \<command\> \<args\>" or "python \<PATH\>/scSplit \<command\> \<args\>" 
 
 ### How to run the toolset:
 
