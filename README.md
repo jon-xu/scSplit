@@ -7,10 +7,10 @@
   2) make sure below python packages can be imported:
   
      numpy, math, pandas, pickle, pysam, random, scipy, statistics, scikit-learn, PyVCF
-  3) git clone https://github.com/jon-xu/scSplit or pip install scSplit
-  4) run with "scSplit \<command\> \<args\>" or "python scSplit \<command\> \<args\>" 
+  3) git clone https://github.com/jon-xu/scSplit
+  4) run with "\<PATH\>/scSplit \<command\> \<args\>" or "python \<PATH\>/scSplit \<command\> \<args\>" 
 
-### How to run the toolset:
+### Overall Pipeline:
 
 ![alt text](https://github.com/jon-xu/scSplit/blob/master/man/workflow.png)
 
