@@ -41,7 +41,7 @@
         -b, --barcodes, barcodes whitelist        
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
-        E.g.: python matrices.py -v mixed_genotype.vcf -i mixed.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv
+        e.g.: python matrices.py -v mixed_genotype.vcf -i mixed.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv
    
    b) This step is memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
 
@@ -76,9 +76,9 @@
         -a, --alt, Alt count CSV as input        
         -n, --num, Number of mixed samples
         -v, --vcf, individual genotypes to check distinguishing variants against (optional)
-        E.g.: python main.py -r ref_filtered.csv -a alt_filtered.csv -n 8
+        e.g.: python main.py -r ref_filtered.csv -a alt_filtered.csv -n 8
 
-      Below files will be generated:
+   d) Below files will be generated:
 
       "scSplit_doublet.txt": indicating which cluster is doublet state
       "scSplit_barcodes_{n}.csv": N+1 indicating barcodes assigned to each of the N+1 samples (including doublet state)
@@ -94,7 +94,7 @@
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
         -p, --psc, generated P(S|C)
-        E.g.: python genotype.py -r ref_filtered.csv -a alt_filtered.csv -p scSplit_P_s_c.csv
+        e.g.: python genotype.py -r ref_filtered.csv -a alt_filtered.csv -p scSplit_P_s_c.csv
         
    b) VCF file ("scSplit.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.
 
