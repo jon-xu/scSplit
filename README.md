@@ -90,7 +90,7 @@
       "scSplit.model", a python pickle dump containing the final allele fraction model (model.model_MAF), and the probability of each cell belonging to each sample (model.P_s_c)
       "scSplit.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample
 
-### 5. Generate sample genotypes based on the split result
+### 5. Generate sample genotypes based on the split result (Optional)
    a) Run "scSplit genotype" with input parameters:
        
         -r, --ref, Ref count CSV as output        
