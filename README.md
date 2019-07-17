@@ -7,7 +7,7 @@
   2) make sure below python packages can be imported:
   
      numpy, math, pandas, pickle, pysam, random, scipy, statistics, scikit-learn, PyVCF
-  3) "git clone https://github.com/jon-xu/scSplit" or "pip  install scSplit"
+  3) "git clone https://<span></span>github.com/jon-xu/scSplit" or "pip  install scSplit"
   4) run with "scSplit \<command\> \<args\>" or "python scSplit \<command\> \<args\>" 
 
 ### Overall Pipeline:
