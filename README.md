@@ -26,7 +26,7 @@
 ### 2. Calling for single-nucleotide variants
    a) Use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1.
    
-   E.g.: freebayes -f <reference.fa> -iXu -C 2 -q 1 filtered.bam > snv.vcf
+   e.g.: freebayes -f <reference.fa> -iXu -C 2 -q 1 filtered.bam > snv.vcf
    
    This step could take very long (up to 30 hours if not using parallel processing), GATK or other SNV calling tools might work as well.  Users can also split the BAM by chromosome and call SNVs separately and merge the vcf files.
    
