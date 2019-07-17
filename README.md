@@ -86,8 +86,8 @@
 
    d) Below files will be generated:
 
-      "scSplit_doublet.txt": indicating which cluster is doublet state
       "scSplit_barcodes_{n}.csv": barcodes assigned to each of the N+1 states (N specified samples and 1 doublet state)
+      "scSplit_doublet.txt": indicating which cluster is doublet state
       "scSplit_dist_variants.txt": the distinguishing variants that can be used to genotype and assign sample to clusters
       "scSplit_dist_matrix.csv": the ALT allele Presence/Absence (P/A) matrix on distinguishing variants for all samples as a reference in assigning sample to clusters
       "scSplit_PA_matrix.csv": the full ALT allele Presence/Absence (P/A) matrix for all samples
