@@ -19,14 +19,14 @@
    
    b) Filter processed BAM in a way that reads with any of following patterns be removed: read quality lower than 10,  being unmapped segment, being secondary alignment, not passing filters, being PCR or optical duplicate, or being supplementary alignment.
    
-   e.g.: samtools view -S -b -q 10 -F 3844 processed.bam > filtered.bam
+   e.g. samtools view -S -b -q 10 -F 3844 processed.bam > filtered.bam
    
    c) Mark BAM file for duplication, and get it sorted and indexed, using rmdup, sort, index commands in samtools
    
 ### 2. Calling for single-nucleotide variants
    a) Use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1.
    
-   e.g.: freebayes -f <reference.fa> -iXu -C 2 -q 1 filtered.bam > snv.vcf
+   e.g. freebayes -f <reference.fa> -iXu -C 2 -q 1 filtered.bam > snv.vcf
    
    This step could take very long (up to 30 hours if not using parallel processing), GATK or other SNV calling tools might work as well.  Users can also split the BAM by chromosome and call SNVs separately and merge the vcf files.
    
@@ -42,7 +42,7 @@
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
         
-        e.g.: scSplit count -v mixed_genotype.vcf -i filtered.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv
+        e.g. scSplit count -v mixed_genotype.vcf -i filtered.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv
    
    b) This step is memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
 
@@ -58,7 +58,7 @@
       
       Processed repeat regions for hg19 and hg38 can be found here: http://data.genomicsresearch.org/Projects/scSplit/RepeatRegions
 
-   2) Common SNPs (e.g., Human common SNPs from 1000 Genome project)
+   2) Common SNPs (e.g. Human common SNPs from 1000 Genome project)
    
       hg19: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
    
@@ -82,7 +82,7 @@
         -n, --num, Number of mixed samples
         -v, --vcf, individual genotypes to check distinguishing variants against (optional)
 
-        e.g.: scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 8
+        e.g. scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 8
 
    d) Below files will be generated:
 
@@ -101,7 +101,7 @@
         -a, --alt, Alt count CSV as output
         -p, --psc, generated P(S|C)
 
-        e.g.: scSplit genotype -r ref_filtered.csv -a alt_filtered.csv -p scSplit_P_s_c.csv
+        e.g. scSplit genotype -r ref_filtered.csv -a alt_filtered.csv -p scSplit_P_s_c.csv
         
    b) VCF file ("scSplit.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.
 
