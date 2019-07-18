@@ -46,7 +46,7 @@
    
    b) This step is memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
 
-   c) Either of two filtering methods below can be used to filter the matrices to improve prediction accuracy:
+   c) Choose either of below two SNV filtering methods to filter the matrices to improve prediction accuracy:
    
    1) Repeat sequence regions (repeatmasker)
 
