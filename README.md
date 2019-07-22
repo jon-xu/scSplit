@@ -69,7 +69,9 @@
       Processed common SNVs for hg19 and hg38 can be found here: http://data.genomicsresearch.org/Projects/scSplit/CommonSNVs
 
    Then filter the matrices generated in the last step ("ref_filtered.csv" and "alt_filtered.csv") with the blacklist of repeat regions or with the whitelist of common SNVs and use them as reference and alternative matrices as inputs for scSplit run.
+   
    e.g. head -n 1 ref_filtered.csv > header
+   
         # for Repeat Region filtering:
         grep -vFwf RepeatRegion ref_filtered.csv > ref_filtered2.csv
         grep -vFwf RepeatRegion alt_filtered.csv > alt_filtered2.csv
@@ -80,7 +82,9 @@
         grep -Fwf CommonSNVs alt_filtered.csv > alt_filtered2.csv       
         cat header ref_filtered2.csv > ref_filtered3.csv
         cat header alt_filtered2.csv > alt_filtered3.csv
+    
     And then use ref_filtered3.csv and alt_filtered3.csv in the next step (scSplit run).
+    
     In the next release, this blacklist or whitelist filtering of SNVs will be built into scSplit count.
 
 ### 4. Demultiplexing and generate ALT P/A matrix
