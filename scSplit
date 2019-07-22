@@ -389,7 +389,7 @@ Options:
                 all_SNVs.add_SNV(record.CHROM, record.POS, record.REF, record.ALT[0])
         
         barcodes = []   # list of cell barcodes
-        for line in open(args.barcodes, 'r'):
+        for line in open(args.bar, 'r'):
             barcodes.append(line.strip())
 
         base_calls_mtx = all_SNVs.build_base_calls_matrix(args.bam, barcodes)
