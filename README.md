@@ -46,19 +46,9 @@
    
    b) This step is memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
 
-   c) It is **strongly recommended** that either of below two SNV filtering methods to filter the matrices to improve prediction accuracy:
-   
-   1) Repeat sequence regions (repeatmasker)
+   c) It is **strongly recommended** that either of below SNV filtering methods to filter the matrices to improve prediction accuracy:
 
-      hg19: http://www.repeatmasker.org/genomes/hg19/RepeatMasker-rm405-db20140131/hg19.fa.out.gz
-
-      hg38: http://www.repeatmasker.org/genomes/hg38/RepeatMasker-rm405-db20140131/hg38.fa.out.gz
-
-      To process the downloaded files, take the chromosome, start and end columns of the files, and filter the called SNVs with these blacklist regions and get a list of SNVs (in a format like: "1:10177") which don't fall into the repeat regions. 
-      
-      Processed repeat regions for hg19 and hg38 can be found here: http://data.genomicsresearch.org/Projects/scSplit/RepeatRegions
-
-   2) Common SNPs (e.g. Human common SNPs from 1000 Genome project)
+      Common SNPs (e.g. Human common SNPs from 1000 Genome project)
    
       hg19: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
    
@@ -68,15 +58,9 @@
       
       Processed common SNVs for hg19 and hg38 can be found here: http://data.genomicsresearch.org/Projects/scSplit/CommonSNVs
 
-   Then filter the matrices generated in the last step ("ref_filtered.csv" and "alt_filtered.csv") with the blacklist of repeat regions or with the whitelist of common SNVs and use them as reference and alternative matrices as inputs for scSplit run.
+   Then filter the matrices generated in the last step ("ref_filtered.csv" and "alt_filtered.csv") with the whitelist of common SNVs and use them as reference and alternative matrices as inputs for scSplit run.
    
         e.g. head -n 1 ref_filtered.csv > header
-
-        # for Repeat Region filtering:
-        grep -vFwf RepeatRegion ref_filtered.csv > ref_filtered2.csv
-        grep -vFwf RepeatRegion alt_filtered.csv > alt_filtered2.csv
-        cat header ref_filtered2.csv > ref_filtered3.csv
-        cat header alt_filtered2.csv > alt_filtered3.csv
 
         # or to keep only Common SNVs:
         grep -Fwf CommonSNVs ref_filtered.csv > ref_filtered2.csv
@@ -85,7 +69,7 @@
         cat header alt_filtered2.csv > alt_filtered3.csv
     
         And then use ref_filtered3.csv and alt_filtered3.csv in the next step (scSplit run).
-        In the next release, this blacklist or whitelist filtering of SNVs will be built into scSplit count.
+        In the next release, this whitelist filtering of SNVs will be built into scSplit count.
 
 ### 4. Demultiplexing and generate ALT P/A matrix
    a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file
