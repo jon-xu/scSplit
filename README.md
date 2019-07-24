@@ -38,7 +38,7 @@
       
         -v, --vcf, VCF from mixed BAM
         -i, --bam, mixed sample BAM        
-        -b, --barcodes, barcodes whitelist        
+        -b, --bar, barcodes whitelist        
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
         
