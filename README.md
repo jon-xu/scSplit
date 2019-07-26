@@ -34,7 +34,8 @@
 
 ### 3. Building allele count matrices
    a) Run "scSplit count" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.
-      input parameters:
+   
+   input parameters:
       
         -v, --vcf, VCF from mixed BAM
         -i, --bam, mixed sample BAM        
