@@ -16,31 +16,15 @@ from scipy.sparse import csr_matrix
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-import sys, vcf, csv, math, datetime, pickle, argparse
+import sys, io, vcf, csv, math, datetime, pickle, argparse
 
-class SNV_data:
+class mixed_VCF:
+
     """
-    Stores data on each SNV
-    """
-
-    def __init__(self, chrom, pos, ref, alt):
-
-        self.CHROM = chrom
-        self.POS = pos
-        self.REF = ref
-        self.ALT = alt
-
-
-class SNV_list(list):
-    """
-    List of SNV_data objects
+    Genotypes from the mixed VCF
     """
 
-    def add_SNV(self, *args, **kwargs):
-        self.append(SNV_data(*args, **kwargs))
-
-
-    def build_base_calls_matrix(self, file_s, barcodes):
+    def build_base_calls_matrix(self, file_s, filtered_vcf, barcodes):
         """
         Build pandas DataFrame
         Parameters:
@@ -48,33 +32,26 @@ class SNV_list(list):
             barcodes(list): cell barcodes
         """
 
-        all_POS = []   # snv positions
-        for entry in self:
-            pos = str(entry.CHROM) + ':' + str(entry.POS)
-            if pos not in all_POS:
-                all_POS.append(pos)
-
         in_sam = ps.AlignmentFile(file_s, 'rb')
-        ref_base_calls_mtx = pd.DataFrame(0, index=all_POS, columns=barcodes)
-        alt_base_calls_mtx = pd.DataFrame(0, index=all_POS, columns=barcodes)
-        print('Num Pos:', len(all_POS), ', Num barcodes:', len(barcodes))
+        ref_base_calls_mtx = pd.DataFrame(0, index=filtered_vcf.index, columns=barcodes)
+        alt_base_calls_mtx = pd.DataFrame(0, index=filtered_vcf.index, columns=barcodes)
+        print('Num Pos:', len(filtered_vcf.index), ', Num barcodes:', len(barcodes))
 
-        for snv in self:
-            position = str(snv.CHROM) + ':' + str(snv.POS)
-            for read in in_sam.fetch(snv.CHROM, snv.POS-1, snv.POS+1):
+        for position, row in filtered_vcf.iterrows():
+            for read in in_sam.fetch(row['CHROM'], row['POS']-1, row['POS']+1):
                 if read.flag < 256:   # only valid reads
-                    if (snv.POS - 1) in read.get_reference_positions():
+                    if (row['POS'] - 1) in read.get_reference_positions():
                         # if the read aligned positions cover the SNV position
                         try:
-                            barcode = read.get_tag('CB')
+                            barcode = read.get_tag('XC')
                         except:
                             barcode = ''
                         if barcode in barcodes:
                             # read the base from the snv.POS which the read has mapped to
-                            base = read.query_sequence[[item for item in read.get_aligned_pairs(True) if item[1] == (snv.POS - 1)][0][0]]
-                            if base == snv.REF:
+                            base = read.query_sequence[[item for item in read.get_aligned_pairs(True) if item[1] == (row['POS'] - 1)][0][0]]
+                            if base == row['REF']:
                                 ref_base_calls_mtx.loc[position, barcode] += 1
-                            if base == snv.ALT:
+                            if base == row['ALT']:
                                 alt_base_calls_mtx.loc[position, barcode] += 1
 
         ref_base_calls_mtx.index.name = alt_base_calls_mtx.index.name = 'SNV'
@@ -375,24 +352,48 @@ Options:
         parser.add_argument('-v', '--vcf', required=True,  help='Genotype of mixed BAM in VCF format')
         parser.add_argument('-i', '--bam', required=True, help='Mixed sample BAM file')
         parser.add_argument('-b', '--bar', required=True,  help='Barcodes whitelist')
+        parser.add_argument('-c', '--com', required=False,  help='common SNVs')
         parser.add_argument('-r', '--ref', required=True,  help='REF count CSV output')
         parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV output')
         args = parser.parse_args(sys.argv[2:])
         
-        dist_alleles = []
         epsilon = 0.01
 
-        all_SNVs = SNV_list()  # list of SNV_data objects
-        for record in vcf.Reader(open(args.vcf, 'r')):
-            # only keep SNVs with heterozygous genotypes, and ignore SNV with multiple bases (e.g. GGGT/GGAT)
-            if (record.samples[0]['GL'][1] > np.log10(1-epsilon)) & (len(record.REF) == 1) & (len(record.ALT) == 1):
-                all_SNVs.add_SNV(record.CHROM, record.POS, record.REF, record.ALT[0])
-        
+        def read_vcf(path):
+            with open(path, 'r') as f:
+                lines = [l for l in f if not l.startswith('##')]
+            return pd.read_csv(
+                io.StringIO(''.join(lines)),
+                dtype={'#CHROM': str, 'POS': int, 'ID': str, 'REF': str, 'ALT': str,
+                    'QUAL': str, 'FILTER': str, 'INFO': str},
+                sep='\t'
+            ).rename(columns={'#CHROM': 'CHROM'})
+
+        mixed_vcf = read_vcf(args.vcf)
+        try:
+            whitelist = pd.read_csv(args.com, header=None)
+            filterlist = 'c'
+        except:
+            filterlist = 'n'
+
+        # only keep SNVs with heterozygous genotypes, and ignore SNV with multiple bases (e.g. GGGT/GGAT)
+
+        mixed_vcf = mixed_vcf.set_index(mixed_vcf['CHROM']+':'+mixed_vcf['POS'].apply(str))
+        item = mixed_vcf.iloc[0].loc['FORMAT'].split(':').index('GL')
+        filtered_vcf = mixed_vcf[(mixed_vcf['REF'].apply(len)==1) & (mixed_vcf['ALT'].apply(len)==1)]
+        if filterlist == 'c':
+            snv_list = sorted(list(set(whitelist[0].tolist()).intersection(filtered_vcf.index)))
+        else:
+            snv_list = sorted(filtered_vcf.index)
+        filtered_vcf = filtered_vcf.loc[snv_list]
+        snv_idx = [indexes for indexes, RA in enumerate([float(x.split(':')[item].split(',')[1]) for x in filtered_vcf.iloc[:,-1]]) if RA > np.log10(1-epsilon)]
+        filtered_vcf = filtered_vcf.iloc[snv_idx][['CHROM','POS','REF','ALT']]
+
         barcodes = []   # list of cell barcodes
         for line in open(args.bar, 'r'):
             barcodes.append(line.strip())
 
-        base_calls_mtx = all_SNVs.build_base_calls_matrix(args.bam, barcodes)
+        base_calls_mtx = mixed_VCF().build_base_calls_matrix(args.bam, filtered_vcf, barcodes)
         base_calls_mtx[0].to_csv('{}'.format(args.ref))
         base_calls_mtx[1].to_csv('{}'.format(args.alt))
 

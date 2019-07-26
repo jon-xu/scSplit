@@ -6,7 +6,7 @@
   1) install python 3.6+
   2) make sure below python packages can be imported:
   
-     numpy, math, pandas, pickle, pysam, random, scipy, statistics, scikit-learn, PyVCF
+     math, numpy, pandas pickle, pysam, PyVCF, scikit-learn, scipy, statistics
   3) "git clone https://<span></span>github.com/jon-xu/scSplit" or "pip  install scSplit"
   4) run with "\<PATH\>/scSplit \<command\> \<args\>" or "python \<PATH\>/scSplit \<command\> \<args\>" 
 
@@ -28,7 +28,7 @@
    
    e.g. freebayes -f <reference.fa> -iXu -C 2 -q 1 filtered.bam > snv.vcf
    
-   This step could take very long (up to 30 hours if not using parallel processing), GATK or other SNV calling tools might work as well.  Users can also split the BAM by chromosome and call SNVs separately and merge the vcf files.
+   This step could take very long (up to 30 hours if not using parallel processing), GATK or other SNV calling tools should work as well.  Users can also split the BAM by chromosome and call SNVs separately and merge the vcf files.
    
    b) The output VCF file should be futher filtered so that only the SNVs with quality score larger than 30 would be kept.
 
@@ -38,13 +38,14 @@
       
         -v, --vcf, VCF from mixed BAM
         -i, --bam, mixed sample BAM        
-        -b, --bar, barcodes whitelist        
+        -b, --bar, barcodes whitelist
+        -c, --com, Common SNVs    
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
         
         e.g. scSplit count -v mixed_genotype.vcf -i filtered.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv
    
-   b) This step is memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
+   b) This step could be memory consuming, if the number of SNVs and/or cells are high. As a guideline, building matrices for 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
 
    c) It is **strongly recommended** to use below SNV list to filter the matrices to improve prediction accuracy:
 
@@ -58,18 +59,7 @@
       
       Processed common SNVs for hg19 and hg38 can be found here: http://data.genomicsresearch.org/Projects/scSplit/CommonSNVs
 
-   Then filter the matrices generated in the last step ("ref_filtered.csv" and "alt_filtered.csv") with the whitelist of common SNVs and use them as reference and alternative matrices as inputs for scSplit run.
-   
-        e.g. head -n 1 ref_filtered.csv > header
-
-        # or to keep only Common SNVs:
-        grep -Fwf CommonSNVs ref_filtered.csv > ref_filtered2.csv
-        grep -Fwf CommonSNVs alt_filtered.csv > alt_filtered2.csv       
-        cat header ref_filtered2.csv > ref_filtered3.csv
-        cat header alt_filtered2.csv > alt_filtered3.csv
-    
-        And then use ref_filtered3.csv and alt_filtered3.csv in the next step (scSplit run).
-        In the next release, this whitelist filtering of SNVs will be built into scSplit count.
+   Please specify the common SNVs in scSplit count using -c/--com parameter, please make sure your common SNVs list does not have header row.
 
 ### 4. Demultiplexing and generate ALT P/A matrix
    a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file
