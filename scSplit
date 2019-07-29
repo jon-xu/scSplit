@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Reference free AF-based demultiplexing on pooled scRNA-seq
+Genotype-free demultiplexing of pooled scRNA-seq
 Jon Xu (jun.xu@uq.edu.au)
 Lachlan Coin
 Aug 2018
@@ -26,9 +26,10 @@ class mixed_VCF:
 
     def build_base_calls_matrix(self, file_s, filtered_vcf, barcodes):
         """
-        Build pandas DataFrame
+        Build REF/ALT allele count matrices
         Parameters:
             file_s(str): Path to sam file (0-based positions)
+            filtered_vcf(Dataframe): Information from genotype of mixed sample
             barcodes(list): cell barcodes
         """
 
@@ -60,26 +61,29 @@ class mixed_VCF:
 
 
 class models:
+    """
+    Main Class including all model parameters
+    """
 
-    def __init__(self, base_calls_mtx, num, doublets):
+    def __init__(self, base_calls_mtx, num):
         """
         Model class containing SNVs, matrices counts, barcodes, model allele fraction with assigned cells
 
         Parameters:
              base_calls_mtx(list of Dataframes): SNV-barcode matrix containing lists of base calls
+             num(int): number of total samples
              ref_bc_mtx: SNV-barcode matrix for reference allele counts
              alt_bc_mtx: SNV-barcode matrix for alternative allele counts
              all_POS(list): list of SNVs positions
              barcodes(list): list of cell barcodes
-             num(int): number of total samples
              P_s_c(DataFrame): barcode/sample matrix containing the probability of seeing sample s with observation of barcode c
              lP_c_s(DataFrame): barcode/sample matrix containing the log likelihood of seeing barcode c under sample s, whose sum should increase by each iteration
-             assigned(list): final lists of cell/barcode assigned to each cluster/model
+             assigned(list): lists of cell/barcode assigned to each cluster/model
+             reassigned(list): final assignment adjusted by doublets proportion
              model_af(Dataframe): Dataframe of model allele frequencies P(A) for each SNV and state
         """
         self.ref_bc_mtx, self.alt_bc_mtx = base_calls_mtx[0], base_calls_mtx[1]
         self.all_POS, self.barcodes = base_calls_mtx[2].tolist(), base_calls_mtx[3].tolist()
-        self.doublets = doublets
         self.num = num
         self.P_s_c = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
@@ -136,13 +140,16 @@ class models:
 
 
     def run_EM(self):
+        """
+        Expectation-Maximization iterations
+        """
 
         # commencing E-M
         iterations = 0
         self.sum_log_likelihood = [1,2]
         while self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]:
             iterations += 1
-            progress = 'Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
+            progress = 'E-M Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
             with open('scSplit.log', 'a') as myfile: myfile.write(progress)
             self.calculate_cell_likelihood()
             self.calculate_model_af()
@@ -155,7 +162,7 @@ class models:
         P(c|s_v) = P(N(A),N(R)|s) = P(g_A|s)^N(A) * (1-P(g_A|s))^N(R)
         log(P(c|s)) = sum_v{(N(A)_c,v*log(P(g_A|s)) + N(R)_c,v*log(1-P(g_A|s)))}
         P(s_n|c) = P(c|s_n) / [P(c|s_1) + P(c|s_2) + ... + P(c|s_n)]
-        log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
+        e.g. log(P(s1|c) = log{1/[1+P(c|s2)/P(c|s1)]} = -log[1+P(c|s2)/P(c|s1)] = -log[1+2^(logP(c|s2)-logP(c|s1))]
         """
 
         # calculate likelihood P(c|s) based on allele probability
@@ -186,7 +193,7 @@ class models:
 
     def assign_cells(self):
         """
-            Final assignment of cells according to P(s|c) >= 0.9
+        Final assignment of cells according to P(s|c) >= 0.9
         """
 
         for n in range(self.num):
@@ -195,7 +202,7 @@ class models:
 
     def define_doublet(self):
         """
-            Locate the doublet state
+        Locate the doublet state
         """
         cross_state = pd.DataFrame(0, index = range(self.num), columns = range(self.num))
         for i in range(self.num):
@@ -213,7 +220,7 @@ class models:
 
     def refine_doublets(self, doublets):
         """
-            Find falsely assigned doublets
+        Optimize assignments based on doublet expectations
         """
         N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num)), pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         found = []
@@ -238,8 +245,8 @@ class models:
 
     def distinguishing_alleles(self, pos=[]):
         """
-            Locate the distinguishing alleles
-            N_ref_mtx, N_alt_mtx: SNV-state matrix for ref/alt counts in each state
+        Locate the distinguishing alleles
+        N_ref_mtx, N_alt_mtx: SNV-state matrix for ref/alt counts in each state
         """
         
         # build SNV-state matrices for ref and alt counts
@@ -318,7 +325,9 @@ class models:
 
 
 class scSplit():
-
+    """
+    Class for commands
+    """
     def __init__(self):
         parser = argparse.ArgumentParser(
             description='Genotype-free demultiplexing of pooled single-cell RNA-Seq',
@@ -378,7 +387,7 @@ Options:
 
         # only keep SNVs with heterozygous genotypes, and ignore SNV with multiple bases (e.g. GGGT/GGAT)
 
-        mixed_vcf = mixed_vcf.set_index(mixed_vcf['CHROM']+':'+mixed_vcf['POS'].apply(str))
+        mixed_vcf = mixed_vcf.set_index(mixed_vcf['CHROM'] + ':' + mixed_vcf['POS'].apply(str))
         item = mixed_vcf.iloc[0].loc['FORMAT'].split(':').index('GL')
         filtered_vcf = mixed_vcf[(mixed_vcf['REF'].apply(len)==1) & (mixed_vcf['ALT'].apply(len)==1)]
         if filterlist == 'c':
@@ -408,18 +417,18 @@ Options:
    -r, --ref    REF count CSV input
    -a, --alt    ALT count CSV input
    -n, --num    Number of mixed samples
-   -d, --dbl    Doublet proportion [0.05]
+   -d, --dbl    Doublet proportion
    -v, --vcf    VCF file for filtering distinguishing variants
 ''')
         parser.add_argument('-r', '--ref', required=True,  help='REF count CSV input')
         parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV input')
         parser.add_argument('-n', '--num', required=True,  help='Number of mixed samples')
-        parser.add_argument('-d', '--dbl', required=False, help='Doublet proportion [0.05]')
+        parser.add_argument('-d', '--dbl', required=False, help='Doublet proportion')
         parser.add_argument('-v', '--vcf', required=False, help='VCF file for filtering distinguishing variants')
         args = parser.parse_args(sys.argv[2:])
 
         try:
-            doublets = float(args.doublets)
+            doublets = float(args.dbl)
         except:
             doublets = -1
 
@@ -441,9 +450,9 @@ Options:
 
         max_likelihood = -1e10
         for i in range(30):
-            with open('scSplit.log', 'a') as myfile: myfile.write('round ' + str(i) + '\n')
+            with open('scSplit.log', 'a') as myfile: myfile.write('Repeat ' + str(i) + '\n')
 
-            model = models(base_calls_mtx, int(num), doublets)
+            model = models(base_calls_mtx, int(num))
             if model.model_af.sum().sum() > 0:
                 model.run_EM()
                 model.assign_cells()
@@ -472,16 +481,19 @@ Options:
         # generate outputs
         with open('scSplit_model', 'wb') as f:
             pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
+        assignments = pd.DataFrame()
         for n in range(int(num)):
-            with open('scSplit_barcodes_{}.csv'.format(n), 'w') as myfile:
-                for item in model.reassigned[n]:
-                    myfile.write(str(item) + '\n')
+            assignment = pd.DataFrame()
+            assignment['Barcode'] = model.reassigned[n]
+            if n != model.doublet:
+                assignment['Cluster'] = 'SNG-' + str(n)
+                assignments = assignments.append(assignment)
+        assignment = pd.DataFrame()
+        assignment['Barcode'] = model.reassigned[model.doublet]
+        assignment['Cluster'] = 'DBL'
+        assignments = assignments.append(assignment)
+        assignments.to_csv('scSplit_result.csv', sep='\t', index=False)
         model.P_s_c.to_csv('scSplit_P_s_c.csv')
-        with open('scSplit_doublet.txt', 'w') as myfile:
-            if doublets == 0:
-                myfile.write('No doublet cluster expected. \n')
-            else:
-                myfile.write('Cluster ' + str(model.doublet) + ' is doublet. \n')
         with open('scSplit_dist_variants.txt', 'w') as myfile:
             for item in model.dist_variants:
                 myfile.write(str(item) + '\n')
