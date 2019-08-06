@@ -124,7 +124,7 @@ class models:
         pca = PCA(n_components=min(nrows, ncols, 20))
         pca_alt = pca.fit_transform(alt_pca)
         if pca_alt.shape[0] < self.num:
-            print('not enough informative cells to support model initialization')
+            with open('scSplit.log', 'a') as myfile: myfile.write('not enough informative cells to support model initialization')
         else:
             kmeans = KMeans(n_clusters=self.num, random_state=0).fit(pca_alt)
             # intialise allele frequency for model states
@@ -149,8 +149,7 @@ class models:
         self.sum_log_likelihood = [1,2]
         while self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]:
             iterations += 1
-            progress = 'E-M Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n'
-            with open('scSplit.log', 'a') as myfile: myfile.write(progress)
+            with open('scSplit.log', 'a') as myfile: myfile.write('E-M Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n')
             self.calculate_cell_likelihood()
             self.calculate_model_af()
             self.sum_log_likelihood.append(self.lP_c_m)
@@ -178,7 +177,7 @@ class models:
                 denom += 2 ** (self.lP_c_s.loc[:, j] - self.lP_c_s.loc[:, i])
             self.P_s_c.loc[:, i] = 1 / denom
 
-        # calculate model likelihood: logP(x|theta) = log{Sigma_yP(x,y|theta)}
+        # calculate model likelihood: logP(x|theta) = log{Sigma_y[P(x,y|theta)]}
         self.lP_c_m = ((self.lP_c_s.subtract(self.lP_c_s.min(axis=1), axis=0).pow(2).sum(axis=1) + 1).apply(np.log2) + self.lP_c_s.min(axis=1)).sum(axis=0)
 
 
@@ -355,13 +354,14 @@ Options:
    -v, --vcf        Genotype of mixed BAM in VCF format
    -i, --bam        Mixed sample BAM file
    -b, --bar        Barcodes whitelist
+   -c, --com        (Optional) Common SNVs
    -r, --ref        REF count CSV output
    -a, --alt        ALT count CSV output
 ''')
         parser.add_argument('-v', '--vcf', required=True,  help='Genotype of mixed BAM in VCF format')
         parser.add_argument('-i', '--bam', required=True, help='Mixed sample BAM file')
         parser.add_argument('-b', '--bar', required=True,  help='Barcodes whitelist')
-        parser.add_argument('-c', '--com', required=False,  help='common SNVs')
+        parser.add_argument('-c', '--com', required=False,  help='(Optional) Common SNVs')
         parser.add_argument('-r', '--ref', required=True,  help='REF count CSV output')
         parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV output')
         args = parser.parse_args(sys.argv[2:])
@@ -409,6 +409,34 @@ Options:
 
     def run(self):      # Demultiplex the scRNA-Seq using REF/ALT count matrices
 
+        # core E-M and cell assignment functions
+        def core(num):
+            max_likelihood = -1e10
+            repeats = int(args.ems)
+            for i in range(repeats):
+                with open('scSplit.log', 'a') as myfile: myfile.write('Building model for ' + num + ' subpopulations...')
+                model = models(base_calls_mtx, num)
+                with open('scSplit.log', 'a') as myfile: myfile.write('Repeat ' + str(i) + ' of ' + str(num) + ' subpopulations (including doublets if expected)' + '\n')
+                if model.model_af.sum().sum() > 0:
+                    model.run_EM()
+                    model.assign_cells()
+                    if model.lP_c_s.max(axis=1).sum() > max_likelihood:
+                        max_likelihood = model.lP_c_s.max(axis=1).sum()
+                        initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
+            model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
+            return(model)
+
+        # function to find elbow point of a curve
+        def elbow(points):
+            points = [-x for x in points]
+            p1, p2, m, e = np.array([0, points[0]]), np.array([len(points)-1, points[-1]]), 0, 0
+            for i in range(1, (len(points)-1)):
+                p3 = np.array([i, points[i]])
+                d = np.linalg.norm(np.cross(p2-p1, p1-p3))/np.linalg.norm(p2-p1)
+                if d > m:
+                    e = i
+            return(e)
+
         # Process command line arguments
         parser = argparse.ArgumentParser(description='Demultiplex the scRNA-Seq using REF/ALT count matrices',
             usage='''scSplit run [<args>]
@@ -417,14 +445,18 @@ Options:
    -r, --ref    REF count CSV input
    -a, --alt    ALT count CSV input
    -n, --num    Number of mixed samples
-   -d, --dbl    Doublet proportion
-   -v, --vcf    VCF file for filtering distinguishing variants
+   -s, --sub    (optional) Maximum number of subpopulations, default: 10
+   -e, --ems    (Optional) Number of EM repeats to avoid local maximum, default: 30
+   -d, --dbl    (Optional) Doublet proportion
+   -v, --vcf    (Optional) VCF file for filtering distinguishing variants
 ''')
         parser.add_argument('-r', '--ref', required=True,  help='REF count CSV input')
         parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV input')
         parser.add_argument('-n', '--num', required=True,  help='Number of mixed samples')
-        parser.add_argument('-d', '--dbl', required=False, help='Doublet proportion')
-        parser.add_argument('-v', '--vcf', required=False, help='VCF file for filtering distinguishing variants')
+        parser.add_argument('-s', '--sub', required=False, default='10', help='(Optional) Largest possible number of subpopulations, default: 10')
+        parser.add_argument('-e', '--ems', required=False, default='30', help='(Optional) Number of EM repeats to avoid local maximum, default: 30')
+        parser.add_argument('-d', '--dbl', required=False, help='(Optional) Doublet proportion')
+        parser.add_argument('-v', '--vcf', required=False, help='(Optional) VCF file for filtering distinguishing variants')
         args = parser.parse_args(sys.argv[2:])
 
         try:
@@ -437,29 +469,26 @@ Options:
         else:
             num = int(args.num) + 1  # additional doublet state
 
-        progress = 'Starting data collection: ' + str(datetime.datetime.now()) + '\n'
-        with open('scSplit.log', 'a') as myfile: myfile.write(progress)
+        with open('scSplit.log', 'a') as myfile: myfile.write('Starting data collection: ' + str(datetime.datetime.now()) + '\n')
 
         # Read in existing matrix from the csv files
         ref = pd.read_csv(args.ref, header=0, index_col=0)
         alt = pd.read_csv(args.alt, header=0, index_col=0)
         ref_s, alt_s = csr_matrix(ref.values), csr_matrix(alt.values)
         base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
-        progress = 'Allele counts matrices uploaded: ' + str(datetime.datetime.now()) + '\n'
-        with open('scSplit.log', 'a') as myfile: myfile.write(progress)
+        with open('scSplit.log', 'a') as myfile: myfile.write('Allele counts matrices uploaded: ' + str(datetime.datetime.now()) + '\n')
 
-        max_likelihood = -1e10
-        for i in range(30):
-            with open('scSplit.log', 'a') as myfile: myfile.write('Repeat ' + str(i) + '\n')
-
-            model = models(base_calls_mtx, int(num))
-            if model.model_af.sum().sum() > 0:
-                model.run_EM()
-                model.assign_cells()
-                if model.lP_c_s.max(axis=1).sum() > max_likelihood:
-                    max_likelihood = model.lP_c_s.max(axis=1).sum()
-                    initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
-        model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
+        if args.num == '0':
+            all_models, LL = [], []
+            for sub in range(2, int(args.sub) + 1):
+                model = core(sub)
+                all_models.append(model)
+                LL.append(model.lP_c_s.max(axis=1).sum())
+            elb = elbow(LL)
+            model = all_models[elb]
+            num = elb + 2
+        else:
+            model = core(num)
 
         model.define_doublet()
         model.refine_doublets(doublets)
@@ -479,8 +508,8 @@ Options:
         model.distinguishing_alleles(pos)
 
         # generate outputs
-        with open('scSplit_model', 'wb') as f:
-            pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
+        # with open('scSplit_model', 'wb') as f:
+        #    pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
         assignments = pd.DataFrame()
         for n in range(int(num)):
             assignment = pd.DataFrame()
@@ -488,17 +517,18 @@ Options:
             if n != model.doublet:
                 assignment['Cluster'] = 'SNG-' + str(n)
                 assignments = assignments.append(assignment)
-        assignment = pd.DataFrame()
-        assignment['Barcode'] = model.reassigned[model.doublet]
-        assignment['Cluster'] = 'DBL'
-        assignments = assignments.append(assignment)
+        if doublets != 0:   # if doublet cluster is expected
+            assignment = pd.DataFrame()
+            assignment['Barcode'] = model.reassigned[model.doublet]
+            assignment['Cluster'] = 'DBL-' + str(model.doublet)
+            assignments = assignments.append(assignment)
         assignments.to_csv('scSplit_result.csv', sep='\t', index=False)
         model.P_s_c.to_csv('scSplit_P_s_c.csv')
         with open('scSplit_dist_variants.txt', 'w') as myfile:
             for item in model.dist_variants:
                 myfile.write(str(item) + '\n')
-        model.dist_matrix.to_csv('scSplit_dist_matrix.csv')
-        model.pa_matrix.to_csv('scSplit_PA_matrix.csv')
+        model.dist_matrix.to_csv('scSplit_dist_matrix.csv', float_format='%.0f')
+        model.pa_matrix.to_csv('scSplit_PA_matrix.csv', float_format='%.0f')
 
 
     def genotype(self):     # Generate genotype information in VCF format
