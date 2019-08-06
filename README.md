@@ -72,6 +72,8 @@
         -r, --ref, Ref count CSV as input        
         -a, --alt, Alt count CSV as input        
         -n, --num, Number of mixed samples
+        -s, --sub, (optional) Maximum number of subpopulations, default: 10
+        -e, --ems, (Optional) Number of EM repeats to avoid local maximum, default: 30
         -d, --dbl, (optional) Correction for doublets, 0 for no doublets, and no refinement on the results if not specified or specified percentage is less than detected
         -v, --vcf, (optional) individual genotypes to check distinguishing variants against
 
@@ -80,7 +82,7 @@
         # below command will tell the script to expect 20% doublets if the natually found doublets are less than that:
         e.g. scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 8 -d 0.2
         
-        # beta: -n 0 -s <sub>, let system decide the optimal sample number between 2 and <sub>
+        # (beta) -n 0 -s <sub>, let system decide the optimal sample number between 2 and <sub>
         e.g. scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 0 -s 12
 
    d) Below files will be generated:
