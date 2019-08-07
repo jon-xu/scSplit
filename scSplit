@@ -124,7 +124,7 @@ class models:
         pca = PCA(n_components=min(nrows, ncols, 20))
         pca_alt = pca.fit_transform(alt_pca)
         if pca_alt.shape[0] < self.num:
-            with open('scSplit.log', 'a') as myfile: myfile.write('not enough informative cells to support model initialization')
+            with open('scSplit.log', 'a') as logfile: logfile.write('not enough informative cells to support model initialization')
         else:
             kmeans = KMeans(n_clusters=self.num, random_state=0).fit(pca_alt)
             # intialise allele frequency for model states
@@ -149,7 +149,7 @@ class models:
         self.sum_log_likelihood = [1,2]
         while (iterations < 1000) & (self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]):
             iterations += 1
-            with open('scSplit.log', 'a') as myfile: myfile.write('E-M Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n')
+            with open('scSplit.log', 'a') as logfile: logfile.write('E-M Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n')
             self.calculate_cell_likelihood()
             self.calculate_model_af()
             self.sum_log_likelihood.append(self.lP_c_m)
@@ -307,8 +307,8 @@ class models:
                 submatrix = submatrix.iloc[:, 0:ncols]
             self.dist_variants += found
             if len(found) == 0:
-                with open('scSplit_dist_variants.txt', 'w') as myfile:
-                    myfile.write('Not all clusters can be distinguished. \n')
+                with open('scSplit_dist_variants.txt', 'w') as logfile:
+                    logfile.write('Not all clusters can be distinguished. \n')
                 break
             # find indistinguishable clusters to form new submatrix
             for i in range(1, len(alt_or_ref.columns)):
@@ -414,8 +414,9 @@ Options:
             max_likelihood = -1e10
             repeats = args.ems
             for i in range(repeats):
-                with open('scSplit.log', 'a') as myfile: myfile.write('Repeat ' + str(i+1) + ' of ' + str(num) + ' subpopulations (including doublets if expected)' + '\n')
-                with open('scSplit.log', 'a') as myfile: myfile.write('Building model... \n')
+                with open('scSplit.log', 'a') as logfile: logfile.write('Repeat ' + str(i+1) + ' in demultiplexing ' + str(num) + \
+                    ' subpopulations (including doublets if expected)' + '\n')
+                with open('scSplit.log', 'a') as logfile: logfile.write('Building model... \n')
                 model = models(base_calls_mtx, num)
                 if model.model_af.sum().sum() > 0:
                     model.run_EM()
@@ -469,14 +470,15 @@ Options:
         else:
             num = args.num + 1  # additional doublet state
 
-        with open('scSplit.log', 'a') as myfile: myfile.write('Loading allele count matrices: ' + str(datetime.datetime.now()) + '\n')
+        with open('scSplit.log', 'a') as logfile: logfile.write('\n' + ' '.join(sys.argv) + '\n')
+        with open('scSplit.log', 'a') as logfile: logfile.write('Loading allele count matrices: ' + str(datetime.datetime.now()) + '\n')
 
         # Read in existing matrix from the csv files
         ref = pd.read_csv(args.ref, header=0, index_col=0)
         alt = pd.read_csv(args.alt, header=0, index_col=0)
         ref_s, alt_s = csr_matrix(ref.values), csr_matrix(alt.values)
         base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
-        with open('scSplit.log', 'a') as myfile: myfile.write('Allele counts matrices uploaded: ' + str(datetime.datetime.now()) + '\n')
+        with open('scSplit.log', 'a') as logfile: logfile.write('Allele counts matrices loaded: ' + str(datetime.datetime.now()) + '\n')
 
         if args.num == '0':
             all_models, LL = [], []
@@ -524,9 +526,9 @@ Options:
             assignments = assignments.append(assignment)
         assignments.to_csv('scSplit_result.csv', sep='\t', index=False)
         model.P_s_c.to_csv('scSplit_P_s_c.csv')
-        with open('scSplit_dist_variants.txt', 'w') as myfile:
+        with open('scSplit_dist_variants.txt', 'w') as logfile:
             for item in model.dist_variants:
-                myfile.write(str(item) + '\n')
+                logfile.write(str(item) + '\n')
         model.dist_matrix.to_csv('scSplit_dist_matrix.csv', float_format='%.0f')
         model.pa_matrix.to_csv('scSplit_PA_matrix.csv', float_format='%.0f')
 
@@ -617,9 +619,9 @@ Options:
                 '##INFO=<ID=AF,Number=A,Type=Float,Description="Estimated Alternate Allele Frequency">\n' + \
                 '##FORMAT=<ID=GL,Number=3,Type=Float,Description="Genotype Likelihood for RR/RA/AA">\n'
 
-        with open('sc_split.vcf', 'w+') as myfile:
-            myfile.write(header)
-            vcf_content.to_csv(myfile, index=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='"')
+        with open('sc_split.vcf', 'w+') as logfile:
+            logfile.write(header)
+            vcf_content.to_csv(logfile, index=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='"')
 
 if __name__ == '__main__':
     scSplit()
