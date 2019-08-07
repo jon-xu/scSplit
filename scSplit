@@ -147,7 +147,7 @@ class models:
         # commencing E-M
         iterations = 0
         self.sum_log_likelihood = [1,2]
-        while self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]:
+        while (iterations < 1000) & (self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]):
             iterations += 1
             with open('scSplit.log', 'a') as myfile: myfile.write('E-M Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n')
             self.calculate_cell_likelihood()
