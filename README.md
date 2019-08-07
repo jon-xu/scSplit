@@ -40,9 +40,9 @@
         -v, --vcf, VCF from mixed BAM
         -i, --bam, mixed sample BAM        
         -b, --bar, barcodes whitelist
-        -c, --com, Common SNVs    
-        -r, --ref, Ref count CSV as output        
-        -a, --alt, Alt count CSV as output
+        -c, --com, common SNVs    
+        -r, --ref, output Ref count matrix        
+        -a, --alt, output Alt count matrix
         
         e.g. scSplit count -v mixed_genotype.vcf -i filtered.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv
    
@@ -69,13 +69,13 @@
    
    c) Run "scSplit run" with input parameters:
       
-        -r, --ref, Ref count CSV as input        
-        -a, --alt, Alt count CSV as input        
-        -n, --num, Number of mixed samples
-        -s, --sub, (optional) Maximum number of subpopulations, default: 10
-        -e, --ems, (Optional) Number of EM repeats to avoid local maximum, default: 30
-        -d, --dbl, (optional) Correction for doublets, 0 for no doublets, and no refinement on the results if not specified or specified percentage is less than detected
-        -v, --vcf, (optional) individual genotypes to check distinguishing variants against
+        -r, --ref, input Ref count matrix        
+        -a, --alt, input Alt count matrix        
+        -n, --num, expected number of mixed samples (-n 0: autodetect mode)
+        -s, --sub, (optional) maximum number of subpopulations in autodetect mode, default: 10
+        -e, --ems, (optional) number of EM repeats to avoid local maximum, default: 30
+        -d, --dbl, (optional) correction for doublets, 0 for no doublets, and no refinement on the results if not specified or specified percentage is less than detected
+        -v, --vcf, (optional) known individual genotypes to map clusters and samples using distinguishing variants
 
         e.g. scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 8
         
