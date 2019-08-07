@@ -89,8 +89,8 @@
 
       "scSplit_result.csv": barcodes assigned to each of the N+1 cluster (N singlets and 1 doublet cluster), doublet marked as DBL-<n> (n stands for the cluster number)
       "scSplit_dist_variants.txt": the distinguishing variants that can be used to genotype and assign sample to clusters
-      "scSplit_dist_matrix.csv": the ALT allele Presence/Absence (P/A) matrix on distinguishing variants for all samples as a reference in assigning sample to clusters, NOT including the doublet cluter, whose sequence number would be different every run (please pay enough attention to this)
-      "scSplit_PA_matrix.csv": the full ALT allele Presence/Absence (P/A) matrix for all samples, NOT including the doublet cluter, whose sequence number would be different every run (please pay enough attention to this)
+      "scSplit_dist_matrix.csv": the ALT allele Presence/Absence (P/A) matrix on distinguishing variants for all samples as a reference in assigning sample to clusters, NOT including the doublet cluster, whose sequence number would be different every run (please pay enough attention to this)
+      "scSplit_PA_matrix.csv": the full ALT allele Presence/Absence (P/A) matrix for all samples, NOT including the doublet cluster, whose sequence number would be different every run (please pay enough attention to this)
       "scSplit_P_s_c.csv", the probability of each cell belonging to each sample
       "scSplit.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample
 
