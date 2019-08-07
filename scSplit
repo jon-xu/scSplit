@@ -414,9 +414,9 @@ Options:
             max_likelihood = -1e10
             repeats = int(args.ems)
             for i in range(repeats):
-                with open('scSplit.log', 'a') as myfile: myfile.write('Building model for ' + num + ' subpopulations...')
+                with open('scSplit.log', 'a') as myfile: myfile.write('Building model for ' + str(num) + ' subpopulations...')
                 model = models(base_calls_mtx, num)
-                with open('scSplit.log', 'a') as myfile: myfile.write('Repeat ' + str(i) + ' of ' + str(num) + ' subpopulations (including doublets if expected)' + '\n')
+                with open('scSplit.log', 'a') as myfile: myfile.write('Repeat ' + str(i+1) + ' of ' + str(num) + ' subpopulations (including doublets if expected)' + '\n')
                 if model.model_af.sum().sum() > 0:
                     model.run_EM()
                     model.assign_cells()
