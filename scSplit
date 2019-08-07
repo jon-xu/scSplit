@@ -412,10 +412,10 @@ Options:
         # core E-M and cell assignment functions
         def core(num):
             max_likelihood = -1e10
-            repeats = int(args.ems)
+            repeats = args.ems
             for i in range(repeats):
                 with open('scSplit.log', 'a') as myfile: myfile.write('Repeat ' + str(i+1) + ' of ' + str(num) + ' subpopulations (including doublets if expected)' + '\n')
-                with open('scSplit.log', 'a') as myfile: myfile.write('Building model...')
+                with open('scSplit.log', 'a') as myfile: myfile.write('Building model... \n')
                 model = models(base_calls_mtx, num)
                 if model.model_af.sum().sum() > 0:
                     model.run_EM()
@@ -452,10 +452,10 @@ Options:
 ''')
         parser.add_argument('-r', '--ref', required=True,  help='REF count CSV input')
         parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV input')
-        parser.add_argument('-n', '--num', required=True,  help='Number of mixed samples')
-        parser.add_argument('-s', '--sub', required=False, default='10', help='(Optional) Largest possible number of subpopulations, default: 10')
-        parser.add_argument('-e', '--ems', required=False, default='30', help='(Optional) Number of EM repeats to avoid local maximum, default: 30')
-        parser.add_argument('-d', '--dbl', required=False, help='(Optional) Doublet proportion')
+        parser.add_argument('-n', '--num', type=int, required=True,  help='Number of mixed samples')
+        parser.add_argument('-s', '--sub', type=int, required=False, default='10', help='(Optional) Largest possible number of subpopulations, default: 10')
+        parser.add_argument('-e', '--ems', type=int, required=False, default='30', help='(Optional) Number of EM repeats to avoid local maximum, default: 30')
+        parser.add_argument('-d', '--dbl', type=float, required=False, help='(Optional) Doublet proportion')
         parser.add_argument('-v', '--vcf', required=False, help='(Optional) VCF file for filtering distinguishing variants')
         args = parser.parse_args(sys.argv[2:])
 
@@ -465,11 +465,11 @@ Options:
             doublets = -1
 
         if doublets == 0:
-            num = int(args.num)
+            num = args.num
         else:
-            num = int(args.num) + 1  # additional doublet state
+            num = args.num + 1  # additional doublet state
 
-        with open('scSplit.log', 'a') as myfile: myfile.write('Starting data collection: ' + str(datetime.datetime.now()) + '\n')
+        with open('scSplit.log', 'a') as myfile: myfile.write('Loading allele count matrices: ' + str(datetime.datetime.now()) + '\n')
 
         # Read in existing matrix from the csv files
         ref = pd.read_csv(args.ref, header=0, index_col=0)
@@ -480,7 +480,7 @@ Options:
 
         if args.num == '0':
             all_models, LL = [], []
-            for sub in range(2, int(args.sub) + 1):
+            for sub in range(2, args.sub + 1):
                 model = core(sub)
                 all_models.append(model)
                 LL.append(model.lP_c_s.max(axis=1).sum())
@@ -511,7 +511,7 @@ Options:
         # with open('scSplit_model', 'wb') as f:
         #    pickle.dump(model, f, pickle.HIGHEST_PROTOCOL)
         assignments = pd.DataFrame()
-        for n in range(int(num)):
+        for n in range(num):
             assignment = pd.DataFrame()
             assignment['Barcode'] = model.reassigned[n]
             if n != model.doublet:
