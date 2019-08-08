@@ -105,7 +105,8 @@ class models:
         irows, icols = np.array(rows), np.array(cols)
         nrows, ncols = len(rows), len(cols)
         mrows = mcols = 0
-        while (mrows < 0.9 * nrows or mcols < 0.9 * ncols) and (nrows >= 10 or ncols >= 10):
+        minimum = int(self.num / 0.9) + 1
+        while (mrows < 0.9 * nrows or mcols < 0.9 * ncols) and (nrows >= minimum or ncols >= minimum):
             rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows))*nrows))))
             rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols))*ncols))))
             rows = np.count_nonzero(base_mtx, axis=1).argsort().tolist()
@@ -224,7 +225,9 @@ class models:
         N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=self.all_POS, columns=range(self.num)), pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         found = []
         self.reassigned = self.assigned.copy()
-        if doublets > 0: # if user has set expectation on doublet proportion, otherwise go with default doublet detection
+        if doublets == 0:
+            self.doublet = -1
+        elif doublets > 0: # if user has set expectation on doublet proportion, otherwise go with default doublet detection
             for n in range(self.num):
                 bc_idx = [i for i, e in enumerate(self.barcodes) if e in self.assigned[n]]
                 # REF/ALT alleles counts from cells assigned to state n
@@ -480,7 +483,7 @@ Options:
         base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
         with open('scSplit.log', 'a') as logfile: logfile.write('Allele counts matrices loaded: ' + str(datetime.datetime.now()) + '\n')
 
-        if args.num == '0':
+        if args.num == 0:
             all_models, LL = [], []
             for sub in range(2, args.sub + 1):
                 model = core(sub)
