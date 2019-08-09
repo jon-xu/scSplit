@@ -62,7 +62,7 @@
    
    c) This step could be memory consuming, if the number of SNVs and/or cells are high. As a guideline, building matrices for 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
    
-   d) Typical runtime for this step is within 1 hour, depending on the nature of the data and the resources being allocated.
+   d) Typical runtime for this step is about one hour, depending on the nature of the data and the resources being allocated.
 
 ### 4. Demultiplexing and generate ALT P/A matrix
    a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file
@@ -96,7 +96,7 @@
       
    d) This step is also memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 50GB RAM to run, please allow enough RAM resource for running the script.
    
-   e) Typical runtime for this step is within 0.5 hour, with default parameters, depending on the nature of the data and the resources being allocated.
+   e) Typical runtime for this step is about half an hour, with default parameters, depending on the nature of the data and the resources being allocated.
 
 ### 5. (Optional) Generate sample genotypes based on the split result
    a) Run "scSplit genotype" with input parameters:
