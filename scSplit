@@ -409,8 +409,12 @@ Options:
             barcodes.append(line.strip())
 
         base_calls_mtx = mixed_VCF().build_base_calls_matrix(args.bam, filtered_vcf, barcodes)
-        base_calls_mtx[0].to_csv('{}'.format(args.ref))
-        base_calls_mtx[1].to_csv('{}'.format(args.alt))
+        
+        if (base_calls_mtx[0] + base_calls_mtx[1]).sum().sum() == 0:
+            raise ValueError('Empty matrices!')
+        else:
+            base_calls_mtx[0].to_csv('{}'.format(args.ref))
+            base_calls_mtx[1].to_csv('{}'.format(args.alt))
 
 
     def run(self):      # Demultiplex the scRNA-Seq using REF/ALT count matrices
