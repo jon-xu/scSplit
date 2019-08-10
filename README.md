@@ -1,6 +1,6 @@
 # scSplit
 ### Genotype-free demultiplexing of pooled single-cell RNA-seq, using a hidden state model for identifying genetically distinct samples within a mixed population.  
-#### It has been tested on 3 to 8 samples using 10X pipeline, and on up to 32-mixed simulated datasets
+#### It has been tested on 3 to 8 real mixed samples using 10X pipeline, and on up to 32-mixed simulated datasets
 
 ### How to install:
   1) install python 3.6+
