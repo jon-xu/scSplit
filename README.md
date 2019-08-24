@@ -31,6 +31,8 @@
    This step could take very long (up to 30 hours if not using parallel processing), GATK or other SNV calling tools should work as well.  Users can also split the BAM by chromosome and call SNVs separately and merge the vcf files.
    
    b) The output VCF file should be futher filtered so that only the SNVs with quality score larger than 30 would be kept.
+   
+   c) Typical number of filtered SNVs is between 20,000 and 60,000
 
 ### 3. Building allele count matrices
    a) Run "scSplit count" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.
