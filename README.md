@@ -28,11 +28,11 @@
    
    e.g. freebayes -f <reference.fa> -iXu -C 2 -q 1 filtered.bam > snv.vcf
    
-   This step could take very long (up to 30 hours if not using parallel processing), GATK or other SNV calling tools should work as well.  Users can also split the BAM by chromosome and call SNVs separately and merge the vcf files.
+   This step could take very long (up to 30 hours if not using parallel processing), GATK or other SNV calling tools should work as well.  In order to fasten the calling process, user can split the BAM by chromosome and call SNVs separately and merge the vcf files afterwards.
    
    b) The output VCF file should be futher filtered so that only the SNVs with quality score larger than 30 would be kept.
    
-   c) Typical number of filtered SNVs is between 20,000 and 60,000
+   c) Typical number of filtered SNVs is roughly between 20,000 and 60,000.
 
 ### 3. Building allele count matrices
    a) Run "scSplit count" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.
