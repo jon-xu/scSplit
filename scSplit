@@ -107,8 +107,10 @@ class models:
         mrows = mcols = 0
         minimum = int(self.num / 0.9 + 0.5) + 1
         while (mrows < 0.9 * nrows or mcols < 0.9 * ncols) and ncols >= minimum:
-            rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows))*nrows))))
-            rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols))*ncols))))
+            rbrows = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*nrows + 0.5))*nrows))))
+            rbcols = np.sort(np.unique(list(map(int, np.random.beta(1,10,int(0.1*ncols + 0.5))*ncols))))
+            if len(rbrows) == 0 and len(rbcols) == 0:   # if no more rows or cols be removed
+                break
             rows = np.count_nonzero(base_mtx, axis=1).argsort().tolist()
             cols = np.count_nonzero(base_mtx, axis=0).argsort().tolist()
             rows = [item for index, item in enumerate(rows) if index not in rbrows]
