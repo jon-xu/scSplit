@@ -15,13 +15,11 @@
 ![alt text](https://github.com/jon-xu/scSplit/blob/master/man/workflow.png)
 
 ### 1. Data quality control and filtering
-   a) Filter original BAM file (barcodes marked with CB:Z: tag) with white listed barcodes to minimize technical noises.
-   
-   b) Filter processed BAM in a way that reads with any of following patterns be removed: read quality lower than 10,  being unmapped segment, being secondary alignment, not passing filters, being PCR or optical duplicate, or being supplementary alignment.
+   a) Filter processed BAM in a way that reads with any of following patterns be removed: read quality lower than 10,  being unmapped segment, being secondary alignment, not passing filters, being PCR or optical duplicate, or being supplementary alignment.
    
    e.g. samtools view -S -b -q 10 -F 3844 processed.bam > filtered.bam
    
-   c) Mark BAM file for duplication, and get it sorted and indexed, using rmdup, sort, index commands in samtools
+   b) Mark BAM file for duplication, and get it sorted and indexed, using rmdup, sort, index commands in samtools
    
 ### 2. Calling for single-nucleotide variants
    a) Use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1.
