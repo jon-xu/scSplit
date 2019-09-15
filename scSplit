@@ -369,7 +369,7 @@ Options:
         parser.add_argument('-v', '--vcf', required=True,  help='Genotype of mixed BAM in VCF format')
         parser.add_argument('-i', '--bam', required=True, help='Mixed sample BAM file')
         parser.add_argument('-b', '--bar', required=True,  help='Barcodes whitelist')
-        parser.add_argument('-t', '--tag', required=False,  default='CB', help='Tag for barcode (default: CB)')
+        parser.add_argument('-t', '--tag', required=False,  default='CB', help='Tag for barcode (default: "CB")')
         parser.add_argument('-c', '--com', required=False,  help='(Optional) Common SNVs')
         parser.add_argument('-r', '--ref', required=True,  help='REF count CSV output')
         parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV output')
