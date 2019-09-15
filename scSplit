@@ -24,7 +24,7 @@ class mixed_VCF:
     Genotypes from the mixed VCF
     """
 
-    def build_base_calls_matrix(self, file_s, filtered_vcf, barcodes):
+    def build_base_calls_matrix(self, file_s, filtered_vcf, barcodes, tag):
         """
         Build REF/ALT allele count matrices
         Parameters:
@@ -44,7 +44,7 @@ class mixed_VCF:
                     if (row['POS'] - 1) in read.get_reference_positions():
                         # if the read aligned positions cover the SNV position
                         try:
-                            barcode = read.get_tag('XC')
+                            barcode = read.get_tag(tag)
                         except:
                             barcode = ''
                         if barcode in barcodes:
@@ -369,6 +369,7 @@ Options:
         parser.add_argument('-v', '--vcf', required=True,  help='Genotype of mixed BAM in VCF format')
         parser.add_argument('-i', '--bam', required=True, help='Mixed sample BAM file')
         parser.add_argument('-b', '--bar', required=True,  help='Barcodes whitelist')
+        parser.add_argument('-t', '--tag', required=False,  default='CB', help='Tag for barcode (default: CB)')
         parser.add_argument('-c', '--com', required=False,  help='(Optional) Common SNVs')
         parser.add_argument('-r', '--ref', required=True,  help='REF count CSV output')
         parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV output')
@@ -410,7 +411,7 @@ Options:
         for line in open(args.bar, 'r'):
             barcodes.append(line.strip())
 
-        base_calls_mtx = mixed_VCF().build_base_calls_matrix(args.bam, filtered_vcf, barcodes)
+        base_calls_mtx = mixed_VCF().build_base_calls_matrix(args.bam, filtered_vcf, barcodes, args.tag)
         
         if (base_calls_mtx[0] + base_calls_mtx[1]).sum().sum() == 0:
             raise ValueError('Empty matrices!')
