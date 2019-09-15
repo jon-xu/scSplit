@@ -42,6 +42,7 @@
         -v, --vcf, VCF from mixed BAM
         -i, --bam, mixed sample BAM        
         -b, --bar, barcodes whitelist
+        -t, --tag, tag for barcode (default: "CB")
         -c, --com, common SNVs    
         -r, --ref, output Ref count matrix        
         -a, --alt, output Alt count matrix
