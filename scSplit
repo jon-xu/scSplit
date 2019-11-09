@@ -412,7 +412,7 @@ Options:
             pl_index = mixed_vcf.iloc[0].loc['FORMAT'].split(':').index('PL')
         except:
             pass
-        try1:
+        try:
             gt_index = mixed_vcf.iloc[0].loc['FORMAT'].split(':').index('GT')
         except:
             pass
