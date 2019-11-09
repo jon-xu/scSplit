@@ -399,14 +399,40 @@ Options:
         # only keep SNVs with heterozygous genotypes, and ignore SNV with multiple bases (e.g. GGGT/GGAT)
 
         mixed_vcf = mixed_vcf.set_index(mixed_vcf['CHROM'] + ':' + mixed_vcf['POS'].apply(str))
-        item = mixed_vcf.iloc[0].loc['FORMAT'].split(':').index('GL')
+        gl_index = gp_index = pl_index = gt_index = -1
+        try:
+            gl_index = mixed_vcf.iloc[0].loc['FORMAT'].split(':').index('GL')
+        except:
+            pass
+        try:
+            gp_index = mixed_vcf.iloc[0].loc['FORMAT'].split(':').index('GP')
+        except:
+            pass
+        try:
+            pl_index = mixed_vcf.iloc[0].loc['FORMAT'].split(':').index('PL')
+        except:
+            pass
+        try:
+        	gt_index = mixed_vcf.iloc[0].loc['FORMAT'].split(':').index('GT')
+        except:
+        	pass
         filtered_vcf = mixed_vcf[(mixed_vcf['REF'].apply(len)==1) & (mixed_vcf['ALT'].apply(len)==1)]
         if filterlist == 'c':
             snv_list = sorted(list(set(whitelist[0].tolist()).intersection(filtered_vcf.index)))
         else:
             snv_list = sorted(filtered_vcf.index)
         filtered_vcf = filtered_vcf.loc[snv_list]
-        snv_idx = [indexes for indexes, RA in enumerate([float(x.split(':')[item].split(',')[1]) for x in filtered_vcf.iloc[:,-1]]) if RA > np.log10(1-epsilon)]
+        if gl_index > -1:
+            snv_idx = [indexes for indexes, RA in enumerate([float(x.split(':')[gl_index].split(',')[1]) for x in filtered_vcf.iloc[:,-1]]) if RA > np.log10(1-epsilon)]
+        elif gp_index > -1: 
+            snv_idx = [indexes for indexes, RA in enumerate([float(x.split(':')[gp_index].split(',')[1]) for x in filtered_vcf.iloc[:,-1]]) if RA > (1-epsilon)]
+        elif pl_index > -1:
+            snv_idx = [indexes for indexes, RA in enumerate([float(x.split(':')[pl_index].split(',')[1]) for x in filtered_vcf.iloc[:,-1]]) if RA == 0]
+        elif gt_index > -1:
+            snv_idx = [indexes for indexes, RA in enumerate([x.split(':')[gt_index] for x in filtered_vcf.iloc[:,-1]]) if RA == '0/1']
+        else:
+            snv_idx = range(filtered_vcf.shape[0])
+
         filtered_vcf = filtered_vcf.iloc[snv_idx][['CHROM','POS','REF','ALT']]
 
         barcodes = []   # list of cell barcodes
