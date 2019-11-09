@@ -28,12 +28,12 @@
    
    e.g. freebayes -f <reference.fa> -iXu -C 2 -q 1 filtered.bam > snv.vcf
    
-   This step could take very long (up to 30 hours if not using parallel processing), GATK or other SNV calling tools should work as well.  In order to fasten the calling process, user can split the BAM by chromosome and call SNVs separately and merge the vcf files afterwards.
+   This step could take very long (up to 30 hours if not using parallel processing).  In order to fasten the calling process, user can split the BAM by chromosome and call SNVs separately and merge the vcf files afterwards.
    
-   b) The output VCF file should be futher filtered so that only the SNVs with quality score larger than 30 would be kept.
+   Users can opt to use GATK or other SNV calling tools as well.  
    
-   c) Typical number of filtered SNVs is roughly between 20,000 and 60,000.
-
+   b) The output VCF file should be further filtered so that only the SNVs with quality score larger than 30 would be kept.
+   
 ### 3. Building allele count matrices
    a) Run "scSplit count" and get two .csv files ("ref_filtered.csv" and "alt_filtered.csv") as output.
    
@@ -63,9 +63,13 @@
 
    Please specify the common SNVs in scSplit count using -c/--com parameter, please make sure your common SNVs list does not have header row.
    
-   c) This step could be memory consuming, if the number of SNVs and/or cells are high. As a guideline, building matrices for 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
+   c) When building count matrices, the genotypes of each allele will be checked and only those heterozygous thus informative SNVs will be kept.  This is achieved by checking GL/GP/PL/GT information fields in the VCF file, while only one in order will be used if existed.
    
-   d) Typical runtime for this step is about one hour, depending on the nature of the data and the resources being allocated.
+   d) This step could be memory consuming, if the number of SNVs and/or cells are high. As a guideline, building matrices for 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
+   
+   e) Typical runtime for this step is about one hour, depending on the nature of the data and the resources being allocated.
+   
+   f) Typical number of filtered SNVs after this step is usually between 10,000 and 30,000.
 
 ### 4. Demultiplexing and generate ALT P/A matrix
    a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file
