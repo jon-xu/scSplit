@@ -413,9 +413,9 @@ Options:
         except:
             pass
         try:
-        	gt_index = mixed_vcf.iloc[0].loc['FORMAT'].split(':').index('GT')
+            gt_index = mixed_vcf.iloc[0].loc['FORMAT'].split(':').index('GT')
         except:
-        	pass
+            pass
         filtered_vcf = mixed_vcf[(mixed_vcf['REF'].apply(len)==1) & (mixed_vcf['ALT'].apply(len)==1)]
         if filterlist == 'c':
             snv_list = sorted(list(set(whitelist[0].tolist()).intersection(filtered_vcf.index)))
