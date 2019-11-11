@@ -63,7 +63,7 @@
 
    Please specify the common SNVs in scSplit count using -c/--com parameter, please make sure your common SNVs list does not have header row.
    
-   c) When building count matrices, the genotypes of each allele will be checked and only those heterozygous thus informative SNVs will be kept.  This is achieved by checking GL/GP/PL/GT information fields in the VCF file, while only one in order will be used if existed.
+   c) When building count matrices, the genotypes of each allele will be checked and only those heterozygous thus informative SNVs will be kept.  This is achieved by checking GL/GP/PL/GT fields in the VCF file, while only one in order will be used if existed.
    
    d) This step could be memory consuming, if the number of SNVs and/or cells are high. As a guideline, building matrices for 60,000 SNVs and 10,000 cells might need more than 30GB RAM to run, please allow enough RAM resource for running the script.
    
