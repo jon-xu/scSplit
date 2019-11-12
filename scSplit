@@ -277,7 +277,7 @@ class models:
         else:
             alt_or_ref = ((N_alt_mtx >= 10) * 1 - ((N_ref_mtx >= 10) & (N_alt_mtx == 0)) * 1).drop(self.doublet, axis=1).astype(np.int8)
         alt_or_ref[alt_or_ref == 0], alt_or_ref[alt_or_ref == -1] = float('NaN'), 0     # formatting data for further analysis
-        alt_or_ref = alt_or_ref.ix[[x for x in alt_or_ref.index if x[0] not in ['X','Y','MT']]]
+        alt_or_ref = alt_or_ref.loc[[x for x in alt_or_ref.index if x[0] not in ['X','Y','M']]]
         submatrix = alt_or_ref.copy()
         
         # find unique alleles for each column window and then merge
@@ -429,7 +429,7 @@ Options:
         elif pl_index > -1:
             snv_idx = [indexes for indexes, RA in enumerate([float(x.split(':')[pl_index].split(',')[1]) for x in filtered_vcf.iloc[:,-1]]) if RA == 0]
         elif gt_index > -1:
-            snv_idx = [indexes for indexes, RA in enumerate([x.split(':')[gt_index] for x in filtered_vcf.iloc[:,-1]]) if RA == '0/1']
+            snv_idx = [indexes for indexes, RA in enumerate([x.split(':')[gt_index] for x in filtered_vcf.iloc[:,-1]]) if RA == '0/1' or RA =='0|1']
         else:
             snv_idx = range(filtered_vcf.shape[0])
 
