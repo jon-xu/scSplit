@@ -36,7 +36,7 @@ class mixed_VCF:
         in_sam = ps.AlignmentFile(file_s, 'rb')
         ref_base_calls_mtx = pd.DataFrame(0, index=filtered_vcf.index, columns=barcodes)
         alt_base_calls_mtx = pd.DataFrame(0, index=filtered_vcf.index, columns=barcodes)
-        print('Num Pos:', len(filtered_vcf.index), ', Num barcodes:', len(barcodes))
+        with open('scSplit.log', 'a') as logfile: logfile.write('Num Pos: ' + str(len(filtered_vcf.index)) + ', Num barcodes: ' + str(len(barcodes)) + '\n')
 
         for position, row in filtered_vcf.iterrows():
             for read in in_sam.fetch(row['CHROM'], row['POS']-1, row['POS']+1):
@@ -446,6 +446,8 @@ Options:
         else:
             base_calls_mtx[0].to_csv('{}'.format(args.ref))
             base_calls_mtx[1].to_csv('{}'.format(args.alt))
+            with open('scSplit.log', 'a') as logfile: logfile.write('Allele count matrices generated. \n')
+
 
 
     def run(self):      # Demultiplex the scRNA-Seq using REF/ALT count matrices
