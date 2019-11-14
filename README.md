@@ -70,6 +70,8 @@
    e) Typical runtime for this step is about one hour, depending on the nature of the data and the resources being allocated.
    
    f) Typical number of filtered SNVs after this step is usually between 10,000 and 30,000.
+   
+   g) If this step fails, please check: 1) is your barcode tag in the BAM files "CB" - if not, you need to specify it using -t/--tag; 2) are you working on a mixed sample VCF rather than a simple merge of individual genotypes?
 
 ### 4. Demultiplexing and generate ALT P/A matrix
    a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file
@@ -81,7 +83,7 @@
         -n, --num, expected number of mixed samples (-n 0: autodetect mode)
         -s, --sub, (optional) maximum number of subpopulations in autodetect mode, default: 10
         -e, --ems, (optional) number of EM repeats to avoid local maximum, default: 30
-        -d, --dbl, (optional) correction for doublets, 0 for no doublets, and no refinement on the results if not specified or specified percentage is less than detected
+        -d, --dbl, (optional) correction for doublets, "-d 0" means you would expect no doublets.  There will be no refinement on the results if this optional parameter is not specified or specified percentage is less than doublet rates detected during the run
         -v, --vcf, (optional) known individual genotypes to map clusters and samples using distinguishing variants
 
         e.g. scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 8
@@ -104,6 +106,8 @@
    d) This step is also memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 50GB RAM to run, please allow enough RAM resource for running the script.
    
    e) Typical runtime for this step is about half an hour, with default parameters, depending on the nature of the data and the resources being allocated.
+   
+   f) Please notice that scSplit will add one pseudo cluster to represent doublet, so if you don't
 
 ### 5. (Optional) Generate sample genotypes based on the split result
    a) Run "scSplit genotype" with input parameters:
