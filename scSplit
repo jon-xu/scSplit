@@ -345,7 +345,7 @@ class scSplit():
 Commands:
    count     Generate REF/ALT count matrices from pooled BAM file
    run       Demultiplex the scRNA-Seq using REF/ALT count matrices
-   genotype  Generate genotype information in VCF format
+   genotype  Generate sample genotypes in VCF format
 ''')
         parser.add_argument('command', help='Subcommand to run')
 
@@ -576,10 +576,10 @@ Options:
         model.pa_matrix.to_csv('scSplit_PA_matrix.csv', float_format='%.0f')
 
 
-    def genotype(self):     # Generate genotype information in VCF format
+    def genotype(self):     # Generate sample genotypes in VCF format
 
         # Process command line arguments
-        parser = argparse.ArgumentParser(description='Generate genotype information in VCF format',
+        parser = argparse.ArgumentParser(description='Generate sample genotypes in VCF format',
             usage='''scSplit genotype [<args>]
 
 Options:
