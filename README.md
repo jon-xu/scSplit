@@ -71,7 +71,7 @@
    
    f) Typical number of filtered SNVs after this step is usually between 10,000 and 30,000.
    
-   g) If this step fails, please check: 1) is your barcode tag in the BAM files "CB" - if not, you need to specify it using -t/--tag; 2) are you working on a mixed sample VCF rather than a simple merge of individual genotypes?
+   g) If this step fails, please check: 1) is your barcode tag in the BAM files "CB" - if not, you need to specify it using -t/--tag; 2) are you working on a mixed sample VCF rather than a simple merge of individual genotypes? 3) is the correct whitelist barcode file being used?
 
 ### 4. Demultiplexing and generate ALT P/A matrix
    a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file
