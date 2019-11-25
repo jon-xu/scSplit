@@ -496,7 +496,7 @@ Options:
 ''')
         parser.add_argument('-r', '--ref', required=True,  help='REF count CSV input')
         parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV input')
-        parser.add_argument('-n', '--num', type=int, required=True,  help='Number of mixed samples')
+        parser.add_argument('-n', '--num', type=int, required=True,  help='Number of known mixed samples, if set to 0 system will find the most likely number')
         parser.add_argument('-s', '--sub', type=int, required=False, default='10', help='(Optional) Largest possible number of subpopulations, default: 10')
         parser.add_argument('-e', '--ems', type=int, required=False, default='30', help='(Optional) Number of EM repeats to avoid local maximum, default: 30')
         parser.add_argument('-d', '--dbl', type=float, required=False, help='(Optional) Doublet proportion')
