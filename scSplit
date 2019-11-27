@@ -131,7 +131,7 @@ class models:
             with open('scSplit.log', 'a') as logfile: logfile.write('Not enough informative cells to support model initialization. \n')
         else:
             kmeans = KMeans(n_clusters=self.num, random_state=0).fit(pca_alt)
-            # intialise allele frequency for model states
+            # initialise allele frequency for model states
             self.initial = []
             for n in range(self.num):
                 self.initial.append([])
@@ -181,7 +181,7 @@ class models:
                 denom += 2 ** (self.lP_c_s.loc[:, j] + self.lP_s[j] - self.lP_c_s.loc[:, i] - self.lP_s[i])
             self.P_s_c.loc[:, i] = 1 / denom
 
-        # calculate model likelihood: logP(x|theta) = log{Sigma_y[P(x,y|theta)]}
+        # calculate model likelihood: logP(c,s|theta) = Sum_c(log{Sum_i[P(s_i)*P(c|s_i)]})
         self.lP_c_m = ((self.lP_c_s.subtract(self.lP_c_s.min(axis=1), axis=0).pow(2).sum(axis=1) + 1).apply(np.log2) + self.lP_c_s.min(axis=1)).sum(axis=0)
 
 
@@ -464,8 +464,8 @@ Options:
                 if model.model_af.sum().sum() > 0:
                     model.run_EM()
                     model.assign_cells()
-                    if model.lP_c_s.max(axis=1).sum() > max_likelihood:
-                        max_likelihood = model.lP_c_s.max(axis=1).sum()
+                    if model.lP_c_m > max_likelihood:
+                        max_likelihood = model.lP_c_m
                         initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
             model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
             return(model)
