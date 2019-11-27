@@ -182,7 +182,7 @@ class models:
             self.P_s_c.loc[:, i] = 1 / denom
 
         # calculate model likelihood: logP(c,s|theta) = Sum_c(log{Sum_i[P(s_i)*P(c|s_i)]})
-        self.lP_c_m = ((self.lP_c_s.subtract(self.lP_c_s.min(axis=1), axis=0).pow(2).sum(axis=1) + 1).apply(np.log2) + self.lP_c_s.min(axis=1)).sum(axis=0)
+        self.lP_c_m = (2**(self.lP_c_s.subtract(self.lP_c_s.min(axis=1), axis=0)).sum(axis=1).apply(np.log2) + self.lP_c_s.min(axis=1)).sum(axis=0)
 
 
     def calculate_model_af(self):
