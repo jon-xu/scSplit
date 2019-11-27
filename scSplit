@@ -256,7 +256,7 @@ class models:
         """
         
         # build SNV-state matrices for ref and alt counts
-        self.dist_variants, ncols = [], self.num - 1
+        self.dist_variants, ncols = [], self.num - 1 + (self.doublet < 0) * 1
         if len(pos) != 0:
             snv = [self.all_POS[i] for i in pos]
             N_ref_mtx, N_alt_mtx = pd.DataFrame(0, index=snv, columns=range(self.num)), pd.DataFrame(0, index=snv, columns=range(self.num))
