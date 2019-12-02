@@ -662,7 +662,7 @@ Options:
                 '##INFO=<ID=AF,Number=A,Type=Float,Description="Estimated Alternate Allele Frequency">\n' + \
                 '##FORMAT=<ID=GL,Number=3,Type=Float,Description="Genotype Likelihood for RR/RA/AA">\n'
 
-        with open('sc_split.vcf', 'w+') as logfile:
+        with open('scSplit.vcf', 'w+') as logfile:
             logfile.write(header)
             vcf_content.to_csv(logfile, index=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='"')
 
