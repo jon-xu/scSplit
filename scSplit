@@ -95,7 +95,7 @@ class models:
         self.model_af = pd.DataFrame(0, index=self.all_POS, columns=range(self.num))
         self.pseudo = 1
 
-        # set background alt count proportion as allele fraction for each SNVs of doublet state, with pseudo count added for 0 counts on multi-base SNPs
+        # background alt count proportion, with pseudo count added for 0 counts on multi-base SNPs
         N_alt = self.alt_bc_mtx.sum(axis=1) + self.pseudo
         N_ref = self.ref_bc_mtx.sum(axis=1) + self.pseudo
         self.k_alt = N_alt / (N_ref + N_alt)
@@ -151,7 +151,7 @@ class models:
         # commencing E-M
         iterations = 0
         self.sum_log_likelihood = [1,2]
-        while (iterations < 1000) & (self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]):
+        while (iterations < 200) & (self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]):
             iterations += 1
             with open('scSplit.log', 'a') as logfile: logfile.write('E-M Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n')
             self.calculate_cell_likelihood()
