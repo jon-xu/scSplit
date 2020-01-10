@@ -89,6 +89,7 @@ class models:
         self.lP_c_s = pd.DataFrame(0, index = self.barcodes, columns = range(self.num))
         self.lP_s = [np.log2(1/self.num)] * self.num
         self.assigned, self.reassigned = [], []
+        self.convergence = 0
         for _ in range(self.num):
             self.assigned.append([])
             self.reassigned.append([])
@@ -151,12 +152,13 @@ class models:
         # commencing E-M
         iterations = 0
         self.sum_log_likelihood = [1,2]
-        while (iterations < 200) & (self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]):
+        while (iterations < 300) & (self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]):
             iterations += 1
             with open('scSplit.log', 'a') as logfile: logfile.write('E-M Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n')
             self.calculate_cell_likelihood()
             self.calculate_model_af()
             self.sum_log_likelihood.append(self.lP_c_m)
+        if iterations < 300: self.convergence = 1
 
 
     def calculate_cell_likelihood(self):
@@ -182,7 +184,7 @@ class models:
             self.P_s_c.loc[:, i] = 1 / denom
 
         # calculate model likelihood: logP(c,s|theta) = Sum_c(log{Sum_i[P(s_i)*P(c|s_i)]})
-        self.lP_c_m = (2**(self.lP_c_s.subtract(self.lP_c_s.min(axis=1), axis=0)).sum(axis=1).apply(np.log2) + self.lP_c_s.min(axis=1)).sum(axis=0)
+        self.lP_c_m = (((2**(self.lP_c_s.subtract(self.lP_c_s.max(axis=1), axis=0) + self.lP_s)).sum(axis=1)).apply(np.log2) + self.lP_c_s.max(axis=1)).sum(axis=0)
 
 
     def calculate_model_af(self):
@@ -192,7 +194,7 @@ class models:
 
         self.model_af = pd.DataFrame((self.alt_bc_mtx.dot(self.P_s_c) + self.k_alt) / ((self.alt_bc_mtx + self.ref_bc_mtx).dot(self.P_s_c) + self.pseudo),
                                         index = self.all_POS, columns = range(self.num))
-        self.lP_s = np.log2(self.P_s_c.sum(axis=0))
+        self.lP_s = np.log2(self.P_s_c.sum(axis=0)) - np.log2(self.P_s_c.sum(axis=0).sum())
 
 
     def assign_cells(self):
@@ -454,20 +456,25 @@ Options:
 
         # core E-M and cell assignment functions
         def core(num):
-            max_likelihood = -1e10
+            max_likelihood = -1e50
             repeats = args.ems
             for i in range(repeats):
-                with open('scSplit.log', 'a') as logfile: logfile.write('Repeat ' + str(i+1) + ' in demultiplexing ' + str(num) + \
+                with open('scSplit.log', 'a') as logfile: logfile.write('Repeat ' + str(i+1) + ' of ' + str(repeats) + ' in demultiplexing ' + str(num) + \
                     ' subpopulations (including doublets if expected)' + '\n')
                 with open('scSplit.log', 'a') as logfile: logfile.write('Building model... \n')
                 model = models(base_calls_mtx, num)
                 if model.model_af.sum().sum() > 0:
                     model.run_EM()
                     model.assign_cells()
+                    with open('scSplit.log', 'a') as logfile: logfile.write('Model Log-Likelihood = ' + str(model.lP_c_m) + '\n')
                     if model.lP_c_m > max_likelihood:
                         max_likelihood = model.lP_c_m
-                        initial, assigned, af, p_s_c = model.initial, model.assigned, model.model_af, model.P_s_c
-            model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
+                        initial, assigned, af, p_s_c, iteration = model.initial, model.assigned, model.model_af, model.P_s_c, i
+            if (max_likelihood == -1e50):
+                raise ValueError('Model not converged, please allow more repeats!')
+            else:
+                model.assigned, model.initial, model.model_af, model.P_s_c = assigned, initial, af, p_s_c
+            print ('Repeat ' + str(iteration+1) + ' was chosen.')
             return(model)
 
         # function to find elbow point of a curve
