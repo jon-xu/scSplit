@@ -18,6 +18,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import sys, io, vcf, csv, math, datetime, pickle, argparse
 
+
 class mixed_VCF:
 
     """
@@ -366,6 +367,7 @@ Options:
    -v, --vcf        Genotype of mixed BAM in VCF format
    -i, --bam        Mixed sample BAM file
    -b, --bar        Barcodes whitelist
+   -t, --tag        Tag for barcodes (default: "CB")
    -c, --com        (Optional) Common SNVs
    -r, --ref        REF count CSV output
    -a, --alt        ALT count CSV output
@@ -373,7 +375,7 @@ Options:
         parser.add_argument('-v', '--vcf', required=True,  help='Genotype of mixed BAM in VCF format')
         parser.add_argument('-i', '--bam', required=True, help='Mixed sample BAM file')
         parser.add_argument('-b', '--bar', required=True,  help='Barcodes whitelist')
-        parser.add_argument('-t', '--tag', required=False,  default='CB', help='Tag for barcode (default: "CB")')
+        parser.add_argument('-t', '--tag', required=False,  default='CB', help='Tag for barcodes (default: "CB")')
         parser.add_argument('-c', '--com', required=False,  help='(Optional) Common SNVs')
         parser.add_argument('-r', '--ref', required=True,  help='REF count CSV output')
         parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV output')
@@ -449,7 +451,6 @@ Options:
             base_calls_mtx[0].to_csv('{}'.format(args.ref))
             base_calls_mtx[1].to_csv('{}'.format(args.alt))
             with open('scSplit.log', 'a') as logfile: logfile.write('Allele count matrices generated. \n')
-
 
 
     def run(self):      # Demultiplex the scRNA-Seq using REF/ALT count matrices
