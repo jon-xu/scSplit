@@ -381,6 +381,8 @@ Options:
         parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV output')
         args = parser.parse_args(sys.argv[2:])
         
+        with open('scSplit.log', 'a') as logfile: logfile.write('\n' + ' '.join(sys.argv) + '\n')
+        
         epsilon = 0.01
 
         def read_vcf(path):
