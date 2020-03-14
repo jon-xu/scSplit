@@ -16,12 +16,14 @@
 
 ### 1. Data quality control and filtering
    a) Make sure pooled scRNA-seq BAM file doesn't contain reads from unknown barcodes, you can do this by "grep -vFwf <whitelist> <xxx>.sam > qcresult" - searching for invalid reads in SAM format of the source BAM using a file of whitelist barcodes.
+  
+   b) if possible, use UMI to eliminate possible duplicated reads.
 
-   b) Filter processed BAM in a way that reads with any of following patterns be removed: read quality lower than 10,  being unmapped segment, being secondary alignment, not passing filters, being PCR or optical duplicate, or being supplementary alignment.
+   c) Filter processed BAM in a way that reads with any of following patterns be removed: read quality lower than 10,  being unmapped segment, being secondary alignment, not passing filters, being PCR or optical duplicate, or being supplementary alignment.
    
    e.g. samtools view -S -b -q 10 -F 3844 processed.bam > filtered.bam
    
-   b) Mark BAM file for duplication, and get it sorted and indexed, using rmdup, sort, index commands in samtools
+   d) Mark BAM file for duplication, and get it sorted and indexed, using rmdup, sort, index commands in samtools
    
 ### 2. Calling for single-nucleotide variants
    a) Use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1.
