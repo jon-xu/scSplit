@@ -48,8 +48,9 @@
         -c, --com, common SNVs    
         -r, --ref, output Ref count matrix        
         -a, --alt, output Alt count matrix
+        -o, --out, output directory
         
-        e.g. scSplit count -v mixed_genotype.vcf -i filtered_rmdup_sorted.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv
+        e.g. scSplit count -v mixed_genotype.vcf -i filtered_rmdup_sorted.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv -o results
    
    b) It is **strongly recommended** to use below SNV list to filter the matrices to improve prediction accuracy:
 
@@ -83,18 +84,19 @@
         -r, --ref, input Ref count matrix        
         -a, --alt, input Alt count matrix        
         -n, --num, expected number of mixed samples (-n 0: autodetect mode)
+        -o, --out, output directory
         -s, --sub, (optional) maximum number of subpopulations in autodetect mode, default: 10
         -e, --ems, (optional) number of EM repeats to avoid local maximum, default: 30
         -d, --dbl, (optional) correction for doublets, "-d 0" means you would expect no doublets.  There will be no refinement on the results if this optional parameter is not specified or specified percentage is less than doublet rates detected during the run
         -v, --vcf, (optional) known individual genotypes to map clusters and samples using distinguishing variants
 
-        e.g. scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 8
+        e.g. scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 8 -o results
         
         # below command will tell the script to expect 20% doublets if the natually found doublets are less than that:
-        e.g. scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 8 -d 0.2
+        e.g. scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 8 -o results -d 0.2
         
         # (beta) -n 0 -s <sub>, let system decide the optimal sample number between 2 and <sub>
-        e.g. scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 0 -s 12
+        e.g. scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 0 -o results -s 12
 
    c) Below files will be generated:
 
@@ -117,8 +119,9 @@
         -r, --ref, Ref count CSV as output        
         -a, --alt, Alt count CSV as output
         -p, --psc, generated P(S|C)
+        -o, --out, output directory
 
-        e.g. scSplit genotype -r ref_filtered.csv -a alt_filtered.csv -p scSplit_P_s_c.csv
+        e.g. scSplit genotype -r ref_filtered.csv -a alt_filtered.csv -p scSplit_P_s_c.csv -o results
         
    b) VCF file ("scSplit.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.
 
