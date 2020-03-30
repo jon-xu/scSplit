@@ -16,7 +16,7 @@ from scipy.sparse import csr_matrix
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-import sys, io, vcf, csv, math, datetime, pickle, argparse
+import os, sys, io, vcf, csv, math, datetime, pickle, argparse
 
 
 class mixed_VCF:
@@ -25,7 +25,7 @@ class mixed_VCF:
     Genotypes from the mixed VCF
     """
 
-    def build_base_calls_matrix(self, file_s, filtered_vcf, barcodes, tag):
+    def build_base_calls_matrix(self, file_s, filtered_vcf, barcodes, tag, output):
         """
         Build REF/ALT allele count matrices
         Parameters:
@@ -37,7 +37,7 @@ class mixed_VCF:
         in_sam = ps.AlignmentFile(file_s, 'rb')
         ref_base_calls_mtx = pd.DataFrame(0, index=filtered_vcf.index, columns=barcodes)
         alt_base_calls_mtx = pd.DataFrame(0, index=filtered_vcf.index, columns=barcodes)
-        with open('scSplit.log', 'a') as logfile: logfile.write('Num Pos: ' + str(len(filtered_vcf.index)) + ', Num barcodes: ' + str(len(barcodes)) + '\n')
+        with open(os.path.join(output, r'scSplit.log'), 'a') as logfile: logfile.write('Num Pos: ' + str(len(filtered_vcf.index)) + ', Num barcodes: ' + str(len(barcodes)) + '\n')
 
         for position, row in filtered_vcf.iterrows():
             for read in in_sam.fetch(row['CHROM'], row['POS']-1, row['POS']+1):
@@ -66,7 +66,7 @@ class models:
     Main Class including all model parameters
     """
 
-    def __init__(self, base_calls_mtx, num):
+    def __init__(self, base_calls_mtx, num, output):
         """
         Model class containing SNVs, matrices counts, barcodes, model allele fraction with assigned cells
 
@@ -130,7 +130,7 @@ class models:
         pca = PCA(n_components=min(nrows, ncols, 20))
         pca_alt = pca.fit_transform(alt_pca)
         if pca_alt.shape[0] < self.num:
-            with open('scSplit.log', 'a') as logfile: logfile.write('Not enough informative cells to support model initialization. \n')
+            with open(os.path.join(output, r'scSplit.log'), 'a') as logfile: logfile.write('Not enough informative cells to support model initialization. \n')
         else:
             kmeans = KMeans(n_clusters=self.num, random_state=0).fit(pca_alt)
             # initialise allele frequency for model states
@@ -145,7 +145,7 @@ class models:
                 self.model_af.loc[:, n] = (barcode_alt + self.k_alt) / (barcode_alt + barcode_ref + self.pseudo)
 
 
-    def run_EM(self):
+    def run_EM(self, output):
         """
         Expectation-Maximization iterations
         """
@@ -155,7 +155,7 @@ class models:
         self.sum_log_likelihood = [1,2]
         while (iterations < 300) & (self.sum_log_likelihood[-2] != self.sum_log_likelihood[-1]):
             iterations += 1
-            with open('scSplit.log', 'a') as logfile: logfile.write('E-M Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n')
+            with open(os.path.join(output, r'scSplit.log'), 'a') as logfile: logfile.write('E-M Iteration ' + str(iterations) + '   ' + str(datetime.datetime.now()) + '\n')
             self.calculate_cell_likelihood()
             self.calculate_model_af()
             self.sum_log_likelihood.append(self.lP_c_m)
@@ -371,6 +371,7 @@ Options:
    -c, --com        (Optional) Common SNVs
    -r, --ref        REF count CSV output
    -a, --alt        ALT count CSV output
+   -o, --out        Output directory
 ''')
         parser.add_argument('-v', '--vcf', required=True,  help='Genotype of mixed BAM in VCF format')
         parser.add_argument('-i', '--bam', required=True, help='Mixed sample BAM file')
@@ -379,9 +380,10 @@ Options:
         parser.add_argument('-c', '--com', required=False,  help='(Optional) Common SNVs')
         parser.add_argument('-r', '--ref', required=True,  help='REF count CSV output')
         parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV output')
+        parser.add_argument('-o', '--out', required=True,  help='Output directory')
         args = parser.parse_args(sys.argv[2:])
         
-        with open('scSplit.log', 'a') as logfile: logfile.write('\n' + ' '.join(sys.argv) + '\n')
+        with open(os.path.join(args.out, r'scSplit.log'), 'a') as logfile: logfile.write('\n' + ' '.join(sys.argv) + '\n')
         
         epsilon = 0.01
 
@@ -445,31 +447,31 @@ Options:
         for line in open(args.bar, 'r'):
             barcodes.append(line.strip())
 
-        base_calls_mtx = mixed_VCF().build_base_calls_matrix(args.bam, filtered_vcf, barcodes, args.tag)
+        base_calls_mtx = mixed_VCF().build_base_calls_matrix(args.bam, filtered_vcf, barcodes, args.tag, args.out)
         
         if (base_calls_mtx[0] + base_calls_mtx[1]).sum().sum() == 0:
             raise ValueError('Empty matrices!')
         else:
             base_calls_mtx[0].to_csv('{}'.format(args.ref))
             base_calls_mtx[1].to_csv('{}'.format(args.alt))
-            with open('scSplit.log', 'a') as logfile: logfile.write('Allele count matrices generated. \n')
+            with open(os.path.join(args.out, r'scSplit.log'), 'a') as logfile: logfile.write('Allele count matrices generated. \n')
 
 
     def run(self):      # Demultiplex the scRNA-Seq using REF/ALT count matrices
 
         # core E-M and cell assignment functions
-        def core(num):
+        def core(num, output):
             max_likelihood = -1e50
             repeats = args.ems
             for i in range(repeats):
-                with open('scSplit.log', 'a') as logfile: logfile.write('Repeat ' + str(i+1) + ' of ' + str(repeats) + ' in demultiplexing ' + str(num) + \
+                with open(os.path.join(output, r'scSplit.log'), 'a') as logfile: logfile.write('Repeat ' + str(i+1) + ' of ' + str(repeats) + ' in demultiplexing ' + str(num) + \
                     ' subpopulations (including doublets if expected)' + '\n')
-                with open('scSplit.log', 'a') as logfile: logfile.write('Building model... \n')
-                model = models(base_calls_mtx, num)
+                with open(os.path.join(output, r'scSplit.log'), 'a') as logfile: logfile.write('Building model... \n')
+                model = models(base_calls_mtx, num, output)
                 if model.model_af.sum().sum() > 0:
-                    model.run_EM()
+                    model.run_EM(output)
                     model.assign_cells()
-                    with open('scSplit.log', 'a') as logfile: logfile.write('Model Log-Likelihood = ' + str(model.lP_c_m) + '\n')
+                    with open(os.path.join(output, r'scSplit.log'), 'a') as logfile: logfile.write('Model Log-Likelihood = ' + str(model.lP_c_m) + '\n')
                     if model.lP_c_m > max_likelihood:
                         max_likelihood = model.lP_c_m
                         initial, assigned, af, p_s_c, iteration = model.initial, model.assigned, model.model_af, model.P_s_c, i
@@ -499,6 +501,7 @@ Options:
    -r, --ref    REF count CSV input
    -a, --alt    ALT count CSV input
    -n, --num    Number of mixed samples
+   -o, --out    Output directory
    -s, --sub    (optional) Maximum number of subpopulations, default: 10
    -e, --ems    (Optional) Number of EM repeats to avoid local maximum, default: 30
    -d, --dbl    (Optional) Doublet proportion
@@ -507,11 +510,15 @@ Options:
         parser.add_argument('-r', '--ref', required=True,  help='REF count CSV input')
         parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV input')
         parser.add_argument('-n', '--num', type=int, required=True,  help='Number of known mixed samples, if set to 0 system will find the most likely number')
+        parser.add_argument('-o', '--out', required=True,  help='Output directory')
         parser.add_argument('-s', '--sub', type=int, required=False, default='10', help='(Optional) Largest possible number of subpopulations, default: 10')
         parser.add_argument('-e', '--ems', type=int, required=False, default='30', help='(Optional) Number of EM repeats to avoid local maximum, default: 30')
         parser.add_argument('-d', '--dbl', type=float, required=False, help='(Optional) Doublet proportion')
         parser.add_argument('-v', '--vcf', required=False, help='(Optional) VCF file for filtering distinguishing variants')
         args = parser.parse_args(sys.argv[2:])
+
+        if not os.path.exists(args.out):
+            raise ValueError('Sepcified output directory does not exist')
 
         try:
             doublets = float(args.dbl)
@@ -523,27 +530,27 @@ Options:
         else:
             num = args.num + 1  # additional doublet state
 
-        with open('scSplit.log', 'a') as logfile: logfile.write('\n' + ' '.join(sys.argv) + '\n')
-        with open('scSplit.log', 'a') as logfile: logfile.write('Loading allele count matrices: ' + str(datetime.datetime.now()) + '\n')
+        with open(os.path.join(args.out, r'scSplit.log'), 'a') as logfile: logfile.write('\n' + ' '.join(sys.argv) + '\n')
+        with open(os.path.join(args.out, r'scSplit.log'), 'a') as logfile: logfile.write('Loading allele count matrices: ' + str(datetime.datetime.now()) + '\n')
 
         # Read in existing matrix from the csv files
         ref = pd.read_csv(args.ref, header=0, index_col=0)
         alt = pd.read_csv(args.alt, header=0, index_col=0)
         ref_s, alt_s = csr_matrix(ref.values), csr_matrix(alt.values)
         base_calls_mtx = [ref_s, alt_s, ref.index, ref.columns]
-        with open('scSplit.log', 'a') as logfile: logfile.write('Allele counts matrices loaded: ' + str(datetime.datetime.now()) + '\n')
+        with open(os.path.join(args.out, r'scSplit.log'), 'a') as logfile: logfile.write('Allele counts matrices loaded: ' + str(datetime.datetime.now()) + '\n')
 
         if args.num == 0:
             all_models, LL = [], []
             for sub in range(2, args.sub + 1):
-                model = core(sub)
+                model = core(sub, args.out)
                 all_models.append(model)
                 LL.append(model.lP_c_s.max(axis=1).sum())
             elb = elbow(LL)
             model = all_models[elb]
             num = elb + 2
         else:
-            model = core(num)
+            model = core(num, args.out)
 
         model.define_doublet()
         model.refine_doublets(doublets)
@@ -577,13 +584,13 @@ Options:
             assignment['Barcode'] = model.reassigned[model.doublet]
             assignment['Cluster'] = 'DBL-' + str(model.doublet)
             assignments = assignments.append(assignment)
-        assignments.to_csv('scSplit_result.csv', sep='\t', index=False)
-        model.P_s_c.to_csv('scSplit_P_s_c.csv')
-        with open('scSplit_dist_variants.txt', 'w') as logfile:
+        assignments.to_csv(os.path.join(args.out, r'scSplit_result.csv'), sep='\t', index=False)
+        model.P_s_c.to_csv(os.path.join(args.out, r'scSplit_P_s_c.csv'))
+        with open(os.path.join(args.out, r'scSplit_dist_variants.txt'), 'w') as logfile:
             for item in model.dist_variants:
                 logfile.write(str(item) + '\n')
-        model.dist_matrix.to_csv('scSplit_dist_matrix.csv', float_format='%.0f')
-        model.pa_matrix.to_csv('scSplit_PA_matrix.csv', float_format='%.0f')
+        model.dist_matrix.to_csv(os.path.join(args.out, r'scSplit_dist_matrix.csv'), float_format='%.0f')
+        model.pa_matrix.to_csv(os.path.join(args.out, r'scSplit_PA_matrix.csv'), float_format='%.0f')
 
 
     def genotype(self):     # Generate sample genotypes in VCF format
@@ -595,12 +602,17 @@ Options:
 Options:
    -r, --ref    REF count CSV input
    -a, --alt    ALT count CSV input
-   -p, --psc    generated P(S|C)
+   -p, --psc    Generated P(S|C)
+   -o, --out    Output directory
 ''')
         parser.add_argument('-r', '--ref', required=True,  help='REF count CSV input')
         parser.add_argument('-a', '--alt', required=True,  help='ALT count CSV input')
         parser.add_argument('-p', '--psc', required=True, help='generated P(S|C)')
+        parser.add_argument('-o', '--out', required=True,  help='Output directory')
         args = parser.parse_args(sys.argv[2:])
+
+        if not os.path.exists(args.out):
+            raise ValueError('Sepcified output directory does not exist')
 
         ref = pd.read_csv(args.ref, header=0, index_col=0)
         alt = pd.read_csv(args.alt, header=0, index_col=0)
@@ -672,7 +684,7 @@ Options:
                 '##INFO=<ID=AF,Number=A,Type=Float,Description="Estimated Alternate Allele Frequency">\n' + \
                 '##FORMAT=<ID=GL,Number=3,Type=Float,Description="Genotype Likelihood for RR/RA/AA">\n'
 
-        with open('scSplit.vcf', 'w+') as logfile:
+        with open(os.path.join(args.out, r'scSplit.vcf'), 'w+') as logfile:
             logfile.write(header)
             vcf_content.to_csv(logfile, index=False, sep='\t', quoting=csv.QUOTE_NONE, escapechar='"')
 
