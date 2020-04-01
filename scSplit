@@ -383,6 +383,9 @@ Options:
         parser.add_argument('-o', '--out', required=True,  help='Output directory')
         args = parser.parse_args(sys.argv[2:])
         
+        if not os.path.exists(args.out):
+            raise ValueError('Specified output directory does not exist')
+        
         with open(os.path.join(args.out, r'scSplit.log'), 'a') as logfile: logfile.write('\n' + ' '.join(sys.argv) + '\n')
         
         epsilon = 0.01
@@ -452,8 +455,8 @@ Options:
         if (base_calls_mtx[0] + base_calls_mtx[1]).sum().sum() == 0:
             raise ValueError('Empty matrices!')
         else:
-            base_calls_mtx[0].to_csv('{}'.format(args.ref))
-            base_calls_mtx[1].to_csv('{}'.format(args.alt))
+            base_calls_mtx[0].to_csv(os.path.join(args.out, args.ref)
+            base_calls_mtx[1].to_csv(os.path.join(args.out, args.alt)
             with open(os.path.join(args.out, r'scSplit.log'), 'a') as logfile: logfile.write('Allele count matrices generated. \n')
 
 
@@ -518,7 +521,7 @@ Options:
         args = parser.parse_args(sys.argv[2:])
 
         if not os.path.exists(args.out):
-            raise ValueError('Sepcified output directory does not exist')
+            raise ValueError('Specified output directory does not exist')
 
         try:
             doublets = float(args.dbl)
@@ -612,7 +615,7 @@ Options:
         args = parser.parse_args(sys.argv[2:])
 
         if not os.path.exists(args.out):
-            raise ValueError('Sepcified output directory does not exist')
+            raise ValueError('Specified output directory does not exist')
 
         ref = pd.read_csv(args.ref, header=0, index_col=0)
         alt = pd.read_csv(args.alt, header=0, index_col=0)
