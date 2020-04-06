@@ -455,8 +455,8 @@ Options:
         if (base_calls_mtx[0] + base_calls_mtx[1]).sum().sum() == 0:
             raise ValueError('Empty matrices!')
         else:
-            base_calls_mtx[0].to_csv(os.path.join(args.out, args.ref)
-            base_calls_mtx[1].to_csv(os.path.join(args.out, args.alt)
+            base_calls_mtx[0].to_csv(os.path.join(args.out, args.ref))
+            base_calls_mtx[1].to_csv(os.path.join(args.out, args.alt))
             with open(os.path.join(args.out, r'scSplit.log'), 'a') as logfile: logfile.write('Allele count matrices generated. \n')
 
 
