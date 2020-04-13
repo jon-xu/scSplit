@@ -64,7 +64,7 @@
       
       Processed common SNVs for hg19 and hg38 can be found here: http://data.genomicsresearch.org/Projects/scSplit/CommonSNVs
 
-   Please specify the common SNVs in scSplit count using -c/--com parameter, please make sure your common SNVs list does not have header row.
+   Please specify the common SNVs in scSplit count using -c/--com parameter, please make sure your common SNVs list does not have header row, and also please make sure the chromosome format in common SNV file is consistent with that in your data, e.g if your data use "chr1" rather than "1" to indicate the chromosome, you need to add "chr" at the beginning of each row of the common SNVs file before running scSplit.
    
    c) When building count matrices, the genotypes of each allele will be checked and only those heterozygous thus informative SNVs will be kept.  This is achieved by checking GL/GP/PL/GT fields in the VCF file, while only one in order will be used if existed.
    
