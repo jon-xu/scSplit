@@ -88,7 +88,7 @@
         -s, --sub, (optional) maximum number of subpopulations in autodetect mode, default: 10
         -e, --ems, (optional) number of EM repeats to avoid local maximum, default: 30
         -d, --dbl, (optional) correction for doublets, "-d 0" means you would expect no doublets.  There will be no refinement on the results if this optional parameter is not specified or specified percentage is less than doublet rates detected during the run
-        -v, --vcf, (optional) known individual genotypes to map clusters and samples using distinguishing variants
+        -v, --vcf, (optional) known individual genotypes to limit distinguishing variants to available variants, so that users do not need to redo genotyping on selected variants, otherwise any variants could be selected as distinguishing variants.
 
         e.g. scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 8 -o results
         
