@@ -1,4 +1,4 @@
-# scSplit          (https://doi.org/10.1186/s13059-019-1852-7)
+# scSplit
 ### Genotype-free demultiplexing of pooled single-cell RNA-seq, using a hidden state model for identifying genetically distinct samples within a mixed population.  
 #### It has been tested on up to 8 real mixed samples (10X pipeline), and up to 32 mixed simulated samples
 
