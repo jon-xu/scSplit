@@ -1,6 +1,9 @@
-# scSplit          [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3464622.svg)](https://doi.org/10.5281/zenodo.3464622)
+# scSplit          [![DOI](https://doi.org/10.1186/s13059-019-1852-7)](https://doi.org/10.1186/s13059-019-1852-7)
 ### Genotype-free demultiplexing of pooled single-cell RNA-seq, using a hidden state model for identifying genetically distinct samples within a mixed population.  
 #### It has been tested on up to 8 real mixed samples (10X pipeline), and up to 32 mixed simulated samples
+
+### To cite the package:
+Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled single-cell RNA-seq. Genome Biol 20, 290 (2019). https://doi.org/10.1186/s13059-019-1852-7
 
 ### How to install:
   1) install python 3.6+
