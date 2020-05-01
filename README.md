@@ -9,7 +9,7 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
   1) install python 3.6+
   2) make sure below python packages can be imported:
   
-     math, numpy, pandas pickle, pysam, PyVCF, scikit-learn, scipy, statistics
+    math, numpy, pandas pickle, pysam, PyVCF, scikit-learn, scipy, statistics
   3) "git clone https://<span></span>github.com/jon-xu/scSplit" or "pip  install scSplit"
   4) run with "\<PATH\>/scSplit \<command\> \<args\>" or "python \<PATH\>/scSplit \<command\> \<args\>" 
 
@@ -114,7 +114,7 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
    
    e) Typical runtime for this step is about half an hour, with default parameters, depending on the nature of the data and the resources being allocated.
    
-   f) Please notice that scSplit will add one pseudo cluster to represent doublet, so if you don't
+   f) scSplit will add one pseudo cluster to represent doublets.
 
 ### 5. (Optional) Generate sample genotypes based on the split result
    a) Run "scSplit genotype" with input parameters:
