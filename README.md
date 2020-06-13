@@ -103,7 +103,7 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
 
    c) Below files will be generated:
 
-      "scSplit_result.csv": barcodes assigned to each of the N+1 cluster (N singlets and 1 doublet cluster), doublet marked as DBL-<n> (n stands for the cluster number)
+      "scSplit_result.csv": barcodes assigned to each of the N+1 cluster (N singlets and 1 doublet cluster), doublet marked as DBL-<n> (n stands for the cluster number), e.g SNG-0 means the cluster 0 is a singlet cluster.
       "scSplit_dist_variants.txt": the distinguishing variants that can be used to genotype and assign sample to clusters
       "scSplit_dist_matrix.csv": the ALT allele Presence/Absence (P/A) matrix on distinguishing variants for all samples as a reference in assigning sample to clusters, NOT including the doublet cluster, whose sequence number would be different every run (please pay enough attention to this)
       "scSplit_PA_matrix.csv": the full ALT allele Presence/Absence (P/A) matrix for all samples, NOT including the doublet cluster, whose sequence number would be different every run (please pay enough attention to this)
@@ -127,6 +127,7 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
         e.g. scSplit genotype -r ref_filtered.csv -a alt_filtered.csv -p scSplit_P_s_c.csv -o results
         
    b) VCF file ("scSplit.vcf") will be generated for the logarithm-transformed genotype likelihoods for all sample models.
+   c) User can compare the genotypes on interesting SNPs with known sample genotypes on these SNPs and link the scSplit cluster to the samples. The largest value of GP or GL indicates the most probable genotype, e.g. GP 0.0, 0.295, 0.705 indicates a genotype of 1/1.
 
 <br/>
 
