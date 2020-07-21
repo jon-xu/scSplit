@@ -16,7 +16,7 @@ from scipy.sparse import csr_matrix
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-import os, sys, io, vcf, csv, math, datetime, pickle, argparse
+import os, sys, io, vcf, csv, math, datetime, pickle, argparse, gzip
 
 
 class mixed_VCF:
@@ -447,8 +447,12 @@ Options:
         filtered_vcf = filtered_vcf.iloc[snv_idx][['CHROM','POS','REF','ALT']]
 
         barcodes = []   # list of cell barcodes
-        for line in open(args.bar, 'r'):
-            barcodes.append(line.strip())
+        if args.bar.endswith('.gz'):
+            for line in gzip.open(args.bar, 'rt'):
+                barcodes.append(line.strip())
+        else:         
+            for line in open(args.bar, 'r'):
+                barcodes.append(line.strip())
 
         base_calls_mtx = mixed_VCF().build_base_calls_matrix(args.bam, filtered_vcf, barcodes, args.tag, args.out)
         
