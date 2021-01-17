@@ -35,8 +35,8 @@ class mixed_VCF:
         """
 
         in_sam = ps.AlignmentFile(file_s, 'rb')
-        ref_base_calls_mtx = pd.DataFrame(0, index=filtered_vcf.index, columns=barcodes)
-        alt_base_calls_mtx = pd.DataFrame(0, index=filtered_vcf.index, columns=barcodes)
+        ref_base_calls_mtx = pd.DataFrame(0, index=filtered_vcf.index, columns=barcodes, dtype=np.int16)
+        alt_base_calls_mtx = pd.DataFrame(0, index=filtered_vcf.index, columns=barcodes, dtype=np.int16)
         with open(os.path.join(output, r'scSplit.log'), 'a') as logfile: logfile.write('Num Pos: ' + str(len(filtered_vcf.index)) + ', Num barcodes: ' + str(len(barcodes)) + '\n')
 
         for position, row in filtered_vcf.iterrows():
