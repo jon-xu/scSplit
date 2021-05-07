@@ -81,8 +81,10 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
 
 ### 4. Demultiplexing and generate ALT P/A matrix
    a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file
+   
+   b) Users can filter out doublets using dedicated tools like DoubletFinder before demultiplexing the sample (in this case please use -d 0 for demultiplexing pure singlets).
 
-   b) Run "scSplit run" with input parameters:
+   c) Run "scSplit run" with input parameters:
       
         -r, --ref, input Ref count matrix        
         -a, --alt, input Alt count matrix        
@@ -101,7 +103,7 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
         # (beta) -n 0 -s <sub>, let system decide the optimal sample number between 2 and <sub>
         e.g. scSplit run -r ref_filtered.csv -a alt_filtered.csv -n 0 -o results -s 12
 
-   c) Below files will be generated:
+   d) Below files will be generated:
 
       "scSplit_result.csv": barcodes assigned to each of the N+1 cluster (N singlets and 1 doublet cluster), doublet marked as DBL-<n> (n stands for the cluster number), e.g SNG-0 means the cluster 0 is a singlet cluster.
       "scSplit_dist_variants.txt": the distinguishing variants that can be used to genotype and assign sample to clusters
@@ -110,11 +112,11 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
       "scSplit_P_s_c.csv", the probability of each cell belonging to each sample
       "scSplit.log" log file containing information for current run, iterations, and final Maximum Likelihood and doublet sample
       
-   d) This step is also memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 50GB RAM to run, please allow enough RAM resource for running the script.
+   e) This step is also memory consuming, and the RAM needed is highly dependent on the quantity of SNVs from last step and the number of cells. As a guideline, a matrix with 60,000 SNVs and 10,000 cells might need more than 50GB RAM to run, please allow enough RAM resource for running the script.
    
-   e) Typical runtime for this step is about half an hour, with default parameters, depending on the nature of the data and the resources being allocated.
+   f) Typical runtime for this step is about half an hour, with default parameters, depending on the nature of the data and the resources being allocated.
    
-   f) scSplit will add one pseudo cluster to represent doublets.
+   g) scSplit will add one pseudo cluster to represent doublets.
 
 ### 5. (Optional) Generate sample genotypes based on the split result
    a) Run "scSplit genotype" with input parameters:
