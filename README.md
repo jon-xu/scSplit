@@ -59,9 +59,9 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
 
       Common SNPs (e.g. Human common SNPs from 1000 Genome project)
    
-      hg19: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
+      hg19: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
    
-      hg38: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/release/20181203_biallelic_SNV/
+      hg38: http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000_genomes_project/release/
         
       To process the genotype files of common SNPs, either download per-chromosome files and concatenate them using bcftools or download the whole genome file, take the first two columns of the vcf file and replace the tab with colon sign so that each line is one SNV, e.g., "1:10177". 
       
