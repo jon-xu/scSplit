@@ -18,7 +18,7 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
 ![alt text](https://github.com/jon-xu/scSplit/blob/master/man/workflow.png)
 
 ### 1. Data quality control and filtering
-   a) Make sure pooled scRNA-seq BAM file doesn't contain reads from unknown barcodes, you can do this by "grep -vFwf <whitelist> <xxx>.sam > qcresult" - searching for invalid reads in SAM format of the source BAM using a file of whitelist barcodes.
+   a) Make sure pooled scRNA-seq BAM file doesn't contain reads from unknown barcodes, you can do this by "grep -vFwf <whitelist> <xxx>.sam > qcresult" - searching for invalid reads in SAM format of the source BAM using a file of whitelist barcodes (from your result, not the whole protocol library).
 
    b) Filter processed BAM in a way that reads with any of following patterns be removed: read quality lower than 10,  being unmapped segment, being secondary alignment, not passing filters, being PCR or optical duplicate, or being supplementary alignment.
    
@@ -77,7 +77,7 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
    
    f) Typical number of filtered SNVs after this step is usually between 10,000 and 30,000.
    
-   g) If this step fails, please check: 1) is your barcode tag in the BAM files "CB" - if not, you need to specify it using -t/--tag; 2) are you working on a mixed sample VCF rather than a simple merge of individual genotypes? 3) is the correct whitelist barcode file being used?
+   g) If this step fails, please check: 1) is your barcode tag in the BAM files "CB" - if not, you need to specify it using -t/--tag; 2) are you working on a mixed sample VCF rather than a simple merge of individual genotypes? 3) is the correct whitelist barcode file being used? The whitelist should be the trusted barcodes from your sequencing result, not the whole barcode library of the sequencing protocol.
 
 ### 4. Demultiplexing and generate ALT P/A matrix
    a) Use the two generated allele counts matrices files to demultiplex the cells into different samples.  Doublet sample will not have the same sample ID every time, which will be explicitly indicated in the log file
