@@ -18,7 +18,7 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
 ![alt text](https://github.com/jon-xu/scSplit/blob/master/man/workflow.png)
 
 ### 1. Data quality control and filtering
-   a) Make sure pooled scRNA-seq BAM file doesn't contain reads from unknown barcodes, you can do this by "grep -vFwf <whitelist> <xxx>.sam > qcresult" - searching for invalid reads in SAM format of the source BAM using a file of whitelist barcodes (from your result, not the whole protocol library).
+   a) Make sure pooled scRNA-seq BAM file doesn't contain reads from unknown barcodes, you can do this by "grep -vFwf \<whitelist\> \<xxx\>.sam > qcresult" - searching for invalid reads in SAM format of the source BAM using a file of whitelist barcodes (from your result, not the whole protocol library).
 
    b) Filter processed BAM in a way that reads with any of following patterns be removed: read quality lower than 10,  being unmapped segment, being secondary alignment, not passing filters, being PCR or optical duplicate, or being supplementary alignment.
    
