@@ -24,9 +24,9 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
    
    e.g. samtools view -S -b -q 10 -F 3844 processed.bam > filtered.bam
    
-   c) Remove duplicated reads based on UMI using tools like UMI-tools. 
+   c) Remove duplicated reads based on UMI using tools like rmdup in UMI-tools. 
    
-   d) Sort and index the BAM file, using rmdup, sort, index commands in samtools.
+   d) Sort and index the BAM file, using sort, index commands in samtools.
    
 ### 2. Calling for single-nucleotide variants
    a) Use freebayes v1.2 to call SNVs from the mixed sample BAM file after being processed in the first step, set the parameters for freebayes so that no insertion and deletions (indels), nor Multi-nucleotide polymorphysim (MNP) or complex events would be captured, set minimum allele count to 2 and set minimum base quality to 1.
