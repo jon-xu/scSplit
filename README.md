@@ -55,7 +55,7 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
         -a, --alt, output Alt count matrix
         -o, --out, output directory
         
-        e.g. scSplit count -v filtered.vcf -i filtered_rmdup_sorted.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv -o results
+        e.g. scSplit count -v filtered.vcf -i filtered_rmdup_sorted.bam -b barcodes.tsv -r ref_filtered.csv -a alt_filtered.csv -o .
    
    b) It is **strongly recommended** to use below SNV list to filter the matrices to improve prediction accuracy:
 
