@@ -9,7 +9,7 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
   1) install python 3.6+
   2) make sure below python packages can be imported:
   
-    math, numpy, pandas pickle, pysam, PyVCF, scikit-learn, scipy, statistics
+    numpy, pandas, pysam, PyVCF, scikit-learn, scipy, statistics
   3) "git clone https://<span></span>github.com/jon-xu/scSplit" or "pip  install scSplit" or simply download the scSplit file
   4) run with "\<PATH\>/scSplit \<command\> \<args\>" or "python \<PATH\>/scSplit \<command\> \<args\>" 
 
