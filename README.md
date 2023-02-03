@@ -22,7 +22,7 @@ Xu, J., Falconer, C., Nguyen, Q. et al. Genotype-free demultiplexing of pooled s
    
    e.g. samtools view -S -b -q 10 -F 3844 processed.bam > filtered.bam
    
-   b) Remove duplicated reads based on UMI using tools like rmdup in UMI-tools. 
+   b) If necessary, remove duplicated reads based on UMI using tools like rmdup in UMI-tools.
    
    c) Sort and index the BAM file, using sort, index commands in samtools.
    
